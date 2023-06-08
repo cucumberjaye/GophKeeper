@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package pb;
+
+import "auth.proto";
+
+option go_package = ".;pb";
+
+message LoginPasswordData {
+    string login = 1;
+    string password = 2;
+    string description = 3;
+}
+
+message TextData {
+    string data = 1;
+    string description = 2;
+}
+
+message BinaryData {
+    bytes data = 1;
+    string description = 2;
+}
+
+message BankCardData {
+    string number = 1;
+    string valid_thru = 2;
+    string cvv = 3;
+    string description = 4;
+}
+
+message Key {
+    string key = 1;
+}
+
+message DataArray {
+    repeated string values = 1;
+}
+
+message Value {
+  oneof kind {
+    LoginPasswordData login_password = 1;
+    TextData text = 2;
+    BinaryData bin_data = 3;
+    BankCardData card_data = 4;
+  }
+}
+
+message Empty {}
+
+service Storage {
+    rpc SetData (Value) returns (ResponseStatus);
+    rpc GetData(Key) returns (Value);
+    rpc GetDataArray(Empty) returns (DataArray);
+    rpc UpdateData(Value) returns (ResponseStatus);
+    rpc DeleteData(Key) returns (ResponseStatus);
+}

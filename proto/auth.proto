@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = ".;pb";
+
+message ResponseStatus {
+    enum Status {
+        OK = 0;
+        FAIL = 1;
+    }
+    Status status = 1;
+    string comment = 2;
+}
+
+message RegistrationRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message AuthenticationRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message AuthToken {
+    string token = 1;
+}
+
+service Authentication {
+    rpc Registration(RegistrationRequest) returns (ResponseStatus);
+    rpc Authentication(AuthenticationRequest) returns (AuthToken);
+}
+
