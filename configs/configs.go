@@ -11,6 +11,7 @@ type Config struct {
 	ServerAddr string
 
 	DBConnConfig *DBConnConfig
+	RedisConfig  *RedisConfig
 }
 
 type DBConnConfig struct {
@@ -20,6 +21,12 @@ type DBConnConfig struct {
 	Port         string
 	DBName       string
 	PoolMaxConns string
+}
+
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
 }
 
 func New() (*Config, error) {
@@ -36,6 +43,11 @@ func New() (*Config, error) {
 			Port:         getEnvIfExists("DB_PORT", "5432"),
 			DBName:       getEnvIfExists("DB_NAME", "postgres"),
 			PoolMaxConns: getEnvIfExists("POOL_MAX_CONNS", "5"),
+		},
+		RedisConfig: &RedisConfig{
+			Host:     getEnvIfExists("REDIS_HOST", "127.0.0.1"),
+			Port:     getEnvIfExists("REDIS_PORT", "6379"),
+			Password: getEnvIfExists("REDIS_PASSWORD", "eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"),
 		},
 	}, nil
 }
