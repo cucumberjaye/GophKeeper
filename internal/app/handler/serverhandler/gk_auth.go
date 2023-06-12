@@ -3,7 +3,9 @@ package serverhandler
 import (
 	"context"
 
+	"github.com/cucumberjaye/GophKeeper/internal/app/models"
 	"github.com/cucumberjaye/GophKeeper/internal/app/pb"
+	"github.com/go-playground/validator"
 	"github.com/rs/zerolog/log"
 )
 
@@ -14,6 +16,14 @@ type AuthServer struct {
 }
 
 func (s *AuthServer) Registration(ctx context.Context, in *pb.RegistrationRequest) (*pb.ResponseStatus, error) {
+	err := validator.New().Struct(&models.LoginPasswordValidate{
+		Login:    in.Login,
+		Password: in.Password,
+	})
+	if err != nil {
+		return &pb.ResponseStatus{Status: pb.ResponseStatus_FAIL}, err
+	}
+
 	if err := s.Service.AddUser(in.Login, in.Password); err != nil {
 		log.Error().Err(err).Send()
 		return &pb.ResponseStatus{Status: pb.ResponseStatus_FAIL}, err

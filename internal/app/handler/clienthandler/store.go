@@ -39,7 +39,7 @@ func (c *KeeperClient) setDataHandler(signal chan os.Signal) {
 		if err == nil {
 			break
 		}
-		fmt.Println(err.Debug())
+		fmt.Println(err)
 	}
 }
 
@@ -93,6 +93,8 @@ func (c *KeeperClient) setLoginPasswordData(signal chan os.Signal) error {
 		}
 		fmt.Println(resp.Comment)
 
+		login, _ = encryption.Encrypt(login)
+		password, _ = encryption.Encrypt(password)
 		err = c.repo.SetLoginPasswordsData(models.LoginPasswordData{
 			Description:  description,
 			Login:        login,
@@ -151,6 +153,8 @@ func (c *KeeperClient) setTextData(signal chan os.Signal) error {
 		}
 		fmt.Println(resp.Comment)
 
+		data, _ = encryption.Encrypt(data)
+
 		err = c.repo.SetTextData(models.TextData{
 			Description:  description,
 			Data:         data,
@@ -207,6 +211,8 @@ func (c *KeeperClient) setBinaryData(signal chan os.Signal) error {
 			continue
 		}
 		fmt.Println(resp.Comment)
+
+		data, _ = encryption.EncryptBin(data)
 
 		err = c.repo.SetBinaryData(models.BinaryData{
 			Description:  description,
@@ -279,6 +285,11 @@ func (c *KeeperClient) setBankCardData(signal chan os.Signal) error {
 			continue
 		}
 		fmt.Println(resp.Comment)
+
+		number, _ = encryption.Encrypt(number)
+		validThru, _ = encryption.Encrypt(validThru)
+		cvv, _ = encryption.Encrypt(cvv)
+
 		err = c.repo.SetBankCardData(models.BankCardData{
 			Description:  description,
 			Number:       number,
@@ -367,7 +378,7 @@ func (c *KeeperClient) getDataArray(signal chan os.Signal) {
 }
 
 func (c *KeeperClient) updateLoginPasswordData(signal chan os.Signal, data models.LoginPasswordData) error {
-	var login, password string
+	var login, password, encLogin, encPassword string
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 
@@ -385,6 +396,7 @@ func (c *KeeperClient) updateLoginPasswordData(signal chan os.Signal, data model
 				break
 			}
 			login = v
+			encLogin, _ = encryption.Encrypt(v)
 		}
 
 		fmt.Printf("(press ctrl+C to back on previous page)\nOld password: %s\nEnter new password: (to skip press enter)\n", oldPassword)
@@ -397,6 +409,7 @@ func (c *KeeperClient) updateLoginPasswordData(signal chan os.Signal, data model
 				break
 			}
 			password = v
+			encPassword, _ = encryption.Encrypt(v)
 		}
 
 		if login == "" && password == "" {
@@ -425,8 +438,8 @@ func (c *KeeperClient) updateLoginPasswordData(signal chan os.Signal, data model
 		fmt.Println(resp.Comment)
 		err = c.repo.UpdateLoginPasswordsData(models.LoginPasswordData{
 			Description:  data.Description,
-			Login:        login,
-			Password:     password,
+			Login:        encLogin,
+			Password:     encPassword,
 			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
@@ -439,7 +452,7 @@ func (c *KeeperClient) updateLoginPasswordData(signal chan os.Signal, data model
 }
 
 func (c *KeeperClient) updateTextData(signal chan os.Signal, data models.TextData) error {
-	var textData string
+	var textData, encData string
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 	oldData, _ := encryption.Decode(data.Data)
@@ -454,6 +467,7 @@ func (c *KeeperClient) updateTextData(signal chan os.Signal, data models.TextDat
 				break
 			}
 			textData = v
+			encData, _ = encryption.Encrypt(v)
 		}
 
 		if textData == "" {
@@ -481,7 +495,7 @@ func (c *KeeperClient) updateTextData(signal chan os.Signal, data models.TextDat
 		fmt.Println(resp.Comment)
 		err = c.repo.UpdateTextData(models.TextData{
 			Description:  data.Description,
-			Data:         textData,
+			Data:         encData,
 			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
@@ -494,6 +508,7 @@ func (c *KeeperClient) updateTextData(signal chan os.Signal, data models.TextDat
 
 func (c *KeeperClient) updateBinaryData(signal chan os.Signal, data models.BinaryData) error {
 	var binData string
+	var encData []byte
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 	oldData, _ := encryption.DecodeBin(data.Data)
@@ -508,6 +523,7 @@ func (c *KeeperClient) updateBinaryData(signal chan os.Signal, data models.Binar
 				break
 			}
 			binData = v
+			encData, _ = encryption.EncryptBin([]byte(v))
 		}
 
 		if binData == "" {
@@ -535,7 +551,7 @@ func (c *KeeperClient) updateBinaryData(signal chan os.Signal, data models.Binar
 		fmt.Println(resp.Comment)
 		err = c.repo.UpdateBinaryData(models.BinaryData{
 			Description:  data.Description,
-			Data:         []byte(binData),
+			Data:         encData,
 			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
@@ -547,7 +563,7 @@ func (c *KeeperClient) updateBinaryData(signal chan os.Signal, data models.Binar
 }
 
 func (c *KeeperClient) updateBankCardData(signal chan os.Signal, data models.BankCardData) error {
-	var number, validThru, cvv string
+	var number, validThru, cvv, encNumber, encValidThru, encCvv string
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 	oldNumber, _ := encryption.Decode(data.Number)
@@ -564,6 +580,7 @@ func (c *KeeperClient) updateBankCardData(signal chan os.Signal, data models.Ban
 				break
 			}
 			number = v
+			encNumber, _ = encryption.Encrypt(v)
 		}
 
 		fmt.Printf("(press ctrl+C to back on previous page)\nOld validThru: %s\nEnter new validThru: (to skip press enter)\n", oldValidThru)
@@ -576,6 +593,8 @@ func (c *KeeperClient) updateBankCardData(signal chan os.Signal, data models.Ban
 				break
 			}
 			validThru = v
+			encValidThru, _ = encryption.Encrypt(v)
+
 		}
 
 		fmt.Printf("(press ctrl+C to back on previous page)\nOld cvv: %s\nEnter new cvv: (to skip press enter)\n", oldCVV)
@@ -588,6 +607,7 @@ func (c *KeeperClient) updateBankCardData(signal chan os.Signal, data models.Ban
 				break
 			}
 			cvv = v
+			encCvv, _ = encryption.Encrypt(v)
 		}
 
 		if number == "" && validThru == "" && cvv == "" {
@@ -617,9 +637,9 @@ func (c *KeeperClient) updateBankCardData(signal chan os.Signal, data models.Ban
 		fmt.Println(resp.Comment)
 		err = c.repo.UpdateBankCardData(models.BankCardData{
 			Description:  data.Description,
-			Number:       number,
-			ValidThru:    validThru,
-			CVV:          cvv,
+			Number:       encNumber,
+			ValidThru:    encValidThru,
+			CVV:          encCvv,
 			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
