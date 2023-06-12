@@ -65,12 +65,8 @@ func (s *KeeperService) SetBankCardData(userID string, data models.BankCardData)
 	return s.repository.SetBankCardData(userID, data)
 }
 
-/*func (s *KeeperService) GetData(key, userID string) (any, error) {
-	return s.repository.GetData(key, userID)
-}*/
-
-func (s *KeeperService) GetDataArray(userID string) ([]any, error) {
-	return s.repository.GetDataArray(userID)
+func (s *KeeperService) Sync(last_sync int64, userID string) ([]any, error) {
+	return s.repository.Sync(last_sync, userID)
 }
 
 func (s *KeeperService) DeleteData(key, userID string) error {

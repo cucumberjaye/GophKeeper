@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS text_data
     description text,
     data text not null,
     user_id text,
-    last_modified timestamp default now(),
+    last_modified int,
     CONSTRAINT fk_text_data
         FOREIGN KEY(description, user_id)
             REFERENCES users_descriptions(description, user_id) ON DELETE CASCADE,

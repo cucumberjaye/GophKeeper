@@ -30,8 +30,8 @@ type KeeperClient struct {
 }
 
 type ClientRepository interface {
-	SetLastModified(userID string) error
-	GetLastModified(userID string) (int64, error)
+	SetLastSync(userID string) error
+	GetLastSync(userID string) (int64, error)
 	SetLoginPasswordsData(data models.LoginPasswordData, userID string) error
 	SetTextData(data models.TextData, userID string) error
 	SetBinaryData(data models.BinaryData, userID string) error
@@ -106,6 +106,8 @@ func (c *KeeperClient) Run() error {
 		}
 		fmt.Println(err.Error())
 	}
+
+	go c.syncer()
 
 	for {
 		fmt.Println("Select number:\n1. SetData\n2. GetData\n3. Exit")

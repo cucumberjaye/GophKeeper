@@ -10,16 +10,19 @@ message LoginPasswordData {
     string login = 1;
     string password = 2;
     string description = 3;
+    int64 last_modified = 4;
 }
 
 message TextData {
     string data = 1;
     string description = 2;
+    int64 last_modified = 3;
 }
 
 message BinaryData {
     bytes data = 1;
     string description = 2;
+    int64 last_modified = 3;
 }
 
 message BankCardData {
@@ -27,6 +30,7 @@ message BankCardData {
     string valid_thru = 2;
     string cvv = 3;
     string description = 4;
+    int64 last_modified = 5;
 }
 
 message Key {
@@ -46,12 +50,13 @@ message Value {
   }
 }
 
-message Empty {}
+message SyncRequest {
+    int64 last_sync = 1;
+}
 
 service Storage {
     rpc SetData (Value) returns (ResponseStatus);
-    rpc GetData(Key) returns (Value);
-    rpc GetDataArray(Empty) returns (DataArray);
+    rpc Sync(SyncRequest) returns (DataArray);
     rpc UpdateData(Value) returns (ResponseStatus);
     rpc DeleteData(Key) returns (ResponseStatus);
 }

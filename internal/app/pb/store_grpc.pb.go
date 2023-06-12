@@ -19,11 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Storage_SetData_FullMethodName      = "/pb.Storage/SetData"
-	Storage_GetData_FullMethodName      = "/pb.Storage/GetData"
-	Storage_GetDataArray_FullMethodName = "/pb.Storage/GetDataArray"
-	Storage_UpdateData_FullMethodName   = "/pb.Storage/UpdateData"
-	Storage_DeleteData_FullMethodName   = "/pb.Storage/DeleteData"
+	Storage_SetData_FullMethodName    = "/pb.Storage/SetData"
+	Storage_Sync_FullMethodName       = "/pb.Storage/Sync"
+	Storage_UpdateData_FullMethodName = "/pb.Storage/UpdateData"
+	Storage_DeleteData_FullMethodName = "/pb.Storage/DeleteData"
 )
 
 // StorageClient is the client API for Storage service.
@@ -31,8 +30,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StorageClient interface {
 	SetData(ctx context.Context, in *Value, opts ...grpc.CallOption) (*ResponseStatus, error)
-	GetData(ctx context.Context, in *Key, opts ...grpc.CallOption) (*Value, error)
-	GetDataArray(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*DataArray, error)
+	Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*DataArray, error)
 	UpdateData(ctx context.Context, in *Value, opts ...grpc.CallOption) (*ResponseStatus, error)
 	DeleteData(ctx context.Context, in *Key, opts ...grpc.CallOption) (*ResponseStatus, error)
 }
@@ -54,18 +52,9 @@ func (c *storageClient) SetData(ctx context.Context, in *Value, opts ...grpc.Cal
 	return out, nil
 }
 
-func (c *storageClient) GetData(ctx context.Context, in *Key, opts ...grpc.CallOption) (*Value, error) {
-	out := new(Value)
-	err := c.cc.Invoke(ctx, Storage_GetData_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *storageClient) GetDataArray(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*DataArray, error) {
+func (c *storageClient) Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*DataArray, error) {
 	out := new(DataArray)
-	err := c.cc.Invoke(ctx, Storage_GetDataArray_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, Storage_Sync_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,8 +84,7 @@ func (c *storageClient) DeleteData(ctx context.Context, in *Key, opts ...grpc.Ca
 // for forward compatibility
 type StorageServer interface {
 	SetData(context.Context, *Value) (*ResponseStatus, error)
-	GetData(context.Context, *Key) (*Value, error)
-	GetDataArray(context.Context, *Empty) (*DataArray, error)
+	Sync(context.Context, *SyncRequest) (*DataArray, error)
 	UpdateData(context.Context, *Value) (*ResponseStatus, error)
 	DeleteData(context.Context, *Key) (*ResponseStatus, error)
 	mustEmbedUnimplementedStorageServer()
@@ -109,11 +97,8 @@ type UnimplementedStorageServer struct {
 func (UnimplementedStorageServer) SetData(context.Context, *Value) (*ResponseStatus, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetData not implemented")
 }
-func (UnimplementedStorageServer) GetData(context.Context, *Key) (*Value, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetData not implemented")
-}
-func (UnimplementedStorageServer) GetDataArray(context.Context, *Empty) (*DataArray, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetDataArray not implemented")
+func (UnimplementedStorageServer) Sync(context.Context, *SyncRequest) (*DataArray, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Sync not implemented")
 }
 func (UnimplementedStorageServer) UpdateData(context.Context, *Value) (*ResponseStatus, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateData not implemented")
@@ -152,38 +137,20 @@ func _Storage_SetData_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Storage_GetData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Key)
+func _Storage_Sync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(StorageServer).GetData(ctx, in)
+		return srv.(StorageServer).Sync(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Storage_GetData_FullMethodName,
+		FullMethod: Storage_Sync_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StorageServer).GetData(ctx, req.(*Key))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Storage_GetDataArray_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(StorageServer).GetDataArray(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Storage_GetDataArray_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StorageServer).GetDataArray(ctx, req.(*Empty))
+		return srv.(StorageServer).Sync(ctx, req.(*SyncRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -236,12 +203,8 @@ var Storage_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Storage_SetData_Handler,
 		},
 		{
-			MethodName: "GetData",
-			Handler:    _Storage_GetData_Handler,
-		},
-		{
-			MethodName: "GetDataArray",
-			Handler:    _Storage_GetDataArray_Handler,
+			MethodName: "Sync",
+			Handler:    _Storage_Sync_Handler,
 		},
 		{
 			MethodName: "UpdateData",

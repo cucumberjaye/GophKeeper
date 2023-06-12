@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/cucumberjaye/GophKeeper/internal/app/models"
 	"github.com/cucumberjaye/GophKeeper/internal/app/pb"
 	"github.com/cucumberjaye/GophKeeper/internal/pkg/utils"
 	"github.com/cucumberjaye/GophKeeper/pkg/encryption"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -37,7 +39,7 @@ func (c *KeeperClient) setDataHandler(signal chan os.Signal) {
 		if err == nil {
 			break
 		}
-		fmt.Println(err.Error())
+		fmt.Println(err.Debug())
 	}
 }
 
@@ -71,12 +73,15 @@ func (c *KeeperClient) setLoginPasswordData(signal chan os.Signal) error {
 		case description = <-c.rch:
 		}
 
+		lastModified := time.Now().Unix()
+
 		reqData := &pb.Value{
 			Kind: &pb.Value_LoginPassword{
 				LoginPassword: &pb.LoginPasswordData{
-					Login:       login,
-					Password:    password,
-					Description: description,
+					Login:        login,
+					Password:     password,
+					Description:  description,
+					LastModified: lastModified,
 				},
 			},
 		}
@@ -89,9 +94,10 @@ func (c *KeeperClient) setLoginPasswordData(signal chan os.Signal) error {
 		fmt.Println(resp.Comment)
 
 		err = c.repo.SetLoginPasswordsData(models.LoginPasswordData{
-			Description: description,
-			Login:       login,
-			Password:    password,
+			Description:  description,
+			Login:        login,
+			Password:     password,
+			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
 			fmt.Println(err)
@@ -126,11 +132,14 @@ func (c *KeeperClient) setTextData(signal chan os.Signal) error {
 		case description = <-c.rch:
 		}
 
+		lastModified := time.Now().Unix()
+
 		reqData := &pb.Value{
 			Kind: &pb.Value_Text{
 				Text: &pb.TextData{
-					Data:        data,
-					Description: description,
+					Data:         data,
+					Description:  description,
+					LastModified: lastModified,
 				},
 			},
 		}
@@ -143,8 +152,9 @@ func (c *KeeperClient) setTextData(signal chan os.Signal) error {
 		fmt.Println(resp.Comment)
 
 		err = c.repo.SetTextData(models.TextData{
-			Description: description,
-			Data:        data,
+			Description:  description,
+			Data:         data,
+			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
 			fmt.Println(err)
@@ -179,11 +189,14 @@ func (c *KeeperClient) setBinaryData(signal chan os.Signal) error {
 		case description = <-c.rch:
 		}
 
+		lastModified := time.Now().Unix()
+
 		reqData := &pb.Value{
 			Kind: &pb.Value_BinData{
 				BinData: &pb.BinaryData{
-					Data:        data,
-					Description: description,
+					Data:         data,
+					Description:  description,
+					LastModified: lastModified,
 				},
 			},
 		}
@@ -196,8 +209,9 @@ func (c *KeeperClient) setBinaryData(signal chan os.Signal) error {
 		fmt.Println(resp.Comment)
 
 		err = c.repo.SetBinaryData(models.BinaryData{
-			Description: description,
-			Data:        data,
+			Description:  description,
+			Data:         data,
+			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
 			fmt.Println(err)
@@ -245,13 +259,16 @@ func (c *KeeperClient) setBankCardData(signal chan os.Signal) error {
 		case description = <-c.rch:
 		}
 
+		lastModified := time.Now().Unix()
+
 		reqData := &pb.Value{
 			Kind: &pb.Value_CardData{
 				CardData: &pb.BankCardData{
-					Number:      number,
-					ValidThru:   validThru,
-					Cvv:         cvv,
-					Description: description,
+					Number:       number,
+					ValidThru:    validThru,
+					Cvv:          cvv,
+					Description:  description,
+					LastModified: lastModified,
 				},
 			},
 		}
@@ -263,10 +280,11 @@ func (c *KeeperClient) setBankCardData(signal chan os.Signal) error {
 		}
 		fmt.Println(resp.Comment)
 		err = c.repo.SetBankCardData(models.BankCardData{
-			Description: description,
-			Number:      number,
-			ValidThru:   validThru,
-			CVV:         cvv,
+			Description:  description,
+			Number:       number,
+			ValidThru:    validThru,
+			CVV:          cvv,
+			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
 			fmt.Println(err)
@@ -276,41 +294,6 @@ func (c *KeeperClient) setBankCardData(signal chan os.Signal) error {
 	}
 	return nil
 }
-
-/*func (c *KeeperClient) getData(signal chan os.Signal) {
-	var key string
-
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
-
-	for {
-		fmt.Println("GetData\nenter description for search:")
-		select {
-		case <-signal:
-			fmt.Println(ErrBack)
-			return
-		case key = <-c.rch:
-		}
-
-		reqData := &pb.Key{Key: key}
-
-		resp, err := c.storeClient.GetData(ctx, reqData)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		switch tp := resp.Kind.(type) {
-		case *pb.Value_LoginPassword:
-			fmt.Printf("\nDescription: %s\nLogin: %s\nPassword: %s\n\n", tp.LoginPassword.Description, tp.LoginPassword.Login, tp.LoginPassword.Password)
-		case *pb.Value_Text:
-			fmt.Printf("\nDescription: %s\nData: %s\n\n", tp.Text.Description, tp.Text.Data)
-		case *pb.Value_BinData:
-			fmt.Printf("\nDescription: %s\nData: %v\n\n", tp.BinData.Description, tp.BinData.Data)
-		case *pb.Value_CardData:
-			fmt.Printf("\nDescription: %s\nNumber: %v\nValidThru: %s\nCVV: %s\n\n", tp.CardData.Description, tp.CardData.Number, tp.CardData.ValidThru, tp.CardData.Cvv)
-		}
-		return
-	}
-}*/
 
 func (c *KeeperClient) getDataArray(signal chan os.Signal) {
 	for {
@@ -421,12 +404,15 @@ func (c *KeeperClient) updateLoginPasswordData(signal chan os.Signal, data model
 			continue
 		}
 
+		lastModified := time.Now().Unix()
+
 		reqData := &pb.Value{
 			Kind: &pb.Value_LoginPassword{
 				LoginPassword: &pb.LoginPasswordData{
-					Login:       login,
-					Password:    password,
-					Description: data.Description,
+					Login:        login,
+					Password:     password,
+					Description:  data.Description,
+					LastModified: lastModified,
 				},
 			},
 		}
@@ -438,9 +424,10 @@ func (c *KeeperClient) updateLoginPasswordData(signal chan os.Signal, data model
 		}
 		fmt.Println(resp.Comment)
 		err = c.repo.UpdateLoginPasswordsData(models.LoginPasswordData{
-			Description: data.Description,
-			Login:       login,
-			Password:    password,
+			Description:  data.Description,
+			Login:        login,
+			Password:     password,
+			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
 			fmt.Println(err)
@@ -474,11 +461,14 @@ func (c *KeeperClient) updateTextData(signal chan os.Signal, data models.TextDat
 			continue
 		}
 
+		lastModified := time.Now().Unix()
+
 		reqData := &pb.Value{
 			Kind: &pb.Value_Text{
 				Text: &pb.TextData{
-					Data:        textData,
-					Description: data.Description,
+					Data:         textData,
+					Description:  data.Description,
+					LastModified: lastModified,
 				},
 			},
 		}
@@ -490,8 +480,9 @@ func (c *KeeperClient) updateTextData(signal chan os.Signal, data models.TextDat
 		}
 		fmt.Println(resp.Comment)
 		err = c.repo.UpdateTextData(models.TextData{
-			Description: data.Description,
-			Data:        textData,
+			Description:  data.Description,
+			Data:         textData,
+			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
 			fmt.Println(err)
@@ -524,11 +515,14 @@ func (c *KeeperClient) updateBinaryData(signal chan os.Signal, data models.Binar
 			continue
 		}
 
+		lastModified := time.Now().Unix()
+
 		reqData := &pb.Value{
 			Kind: &pb.Value_BinData{
 				BinData: &pb.BinaryData{
-					Data:        []byte(binData),
-					Description: data.Description,
+					Data:         []byte(binData),
+					Description:  data.Description,
+					LastModified: lastModified,
 				},
 			},
 		}
@@ -540,8 +534,9 @@ func (c *KeeperClient) updateBinaryData(signal chan os.Signal, data models.Binar
 		}
 		fmt.Println(resp.Comment)
 		err = c.repo.UpdateBinaryData(models.BinaryData{
-			Description: data.Description,
-			Data:        []byte(binData),
+			Description:  data.Description,
+			Data:         []byte(binData),
+			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
 			fmt.Println(err)
@@ -600,13 +595,16 @@ func (c *KeeperClient) updateBankCardData(signal chan os.Signal, data models.Ban
 			continue
 		}
 
+		lastModified := time.Now().Unix()
+
 		reqData := &pb.Value{
 			Kind: &pb.Value_CardData{
 				CardData: &pb.BankCardData{
-					Number:      number,
-					ValidThru:   validThru,
-					Cvv:         cvv,
-					Description: data.Description,
+					Number:       number,
+					ValidThru:    validThru,
+					Cvv:          cvv,
+					Description:  data.Description,
+					LastModified: lastModified,
 				},
 			},
 		}
@@ -618,10 +616,11 @@ func (c *KeeperClient) updateBankCardData(signal chan os.Signal, data models.Ban
 		}
 		fmt.Println(resp.Comment)
 		err = c.repo.UpdateBankCardData(models.BankCardData{
-			Description: data.Description,
-			Number:      number,
-			ValidThru:   validThru,
-			CVV:         cvv,
+			Description:  data.Description,
+			Number:       number,
+			ValidThru:    validThru,
+			CVV:          cvv,
+			LastModified: lastModified,
 		}, c.userID)
 		if err != nil {
 			fmt.Println(err)
@@ -661,5 +660,73 @@ func (c *KeeperClient) deleteData(data any) {
 	err = deleteFunc(key, c.userID)
 	if err != nil {
 		fmt.Println(err)
+	}
+}
+
+func (c *KeeperClient) syncer() {
+	c.sync()
+	ticker := time.NewTicker(5 * time.Minute)
+
+	for {
+		<-ticker.C
+		c.sync()
+	}
+}
+
+func (c *KeeperClient) sync() {
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
+
+	lastSync, err := c.repo.GetLastSync(c.userID)
+	if err != nil {
+		log.Debug().Err(err).Send()
+	}
+	resp, err := c.storeClient.Sync(ctx, &pb.SyncRequest{LastSync: lastSync})
+	if err != nil {
+		log.Debug().Err(err).Send()
+	}
+
+	err = c.repo.SetLastSync(c.userID)
+	if err != nil {
+		log.Debug().Err(err).Send()
+	}
+
+	if resp == nil {
+		return
+	}
+
+	for i := range resp.Values {
+		switch t := resp.Values[i].Kind.(type) {
+		case *pb.Value_LoginPassword:
+			err = c.repo.SetLoginPasswordsData(models.LoginPasswordData{
+				Description:  t.LoginPassword.Description,
+				Login:        t.LoginPassword.Login,
+				Password:     t.LoginPassword.Password,
+				LastModified: t.LoginPassword.LastModified,
+			}, c.userID)
+		case *pb.Value_Text:
+			err = c.repo.SetTextData(models.TextData{
+				Description:  t.Text.Description,
+				Data:         t.Text.Data,
+				LastModified: t.Text.LastModified,
+			}, c.userID)
+		case *pb.Value_BinData:
+			err = c.repo.SetBinaryData(models.BinaryData{
+				Description:  t.BinData.Description,
+				Data:         t.BinData.Data,
+				LastModified: t.BinData.LastModified,
+			}, c.userID)
+		case *pb.Value_CardData:
+			err = c.repo.SetBankCardData(models.BankCardData{
+				Description:  t.CardData.Description,
+				Number:       t.CardData.Number,
+				ValidThru:    t.CardData.ValidThru,
+				CVV:          t.CardData.Cvv,
+				LastModified: t.CardData.LastModified,
+			}, c.userID)
+		}
+
+		if err != nil {
+			log.Debug().Err(err).Send()
+		}
 	}
 }

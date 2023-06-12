@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS login_password
     login text not null,
     password text not null,
     user_id text,
-    last_modified timestamp default now(),
+    last_modified int,
     CONSTRAINT fk_login_password
        FOREIGN KEY(description, user_id)
             REFERENCES users_descriptions(description, user_id) ON DELETE CASCADE,

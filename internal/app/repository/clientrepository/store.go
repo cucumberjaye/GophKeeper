@@ -131,10 +131,10 @@ func (r *ClientStorage) DeleteBankCardData(key string, userID string) error {
 	return r.rdb.Del(context.Background(), fmt.Sprintf("%s:%s:%s", bankCardData, key, userID)).Err()
 }
 
-func (r *ClientStorage) SetLastModified(userID string) error {
-	return r.rdb.Set(context.Background(), lastModifiedKey+userID, time.Now().UnixMilli(), 0).Err()
+func (r *ClientStorage) SetLastSync(userID string) error {
+	return r.rdb.Set(context.Background(), lastModifiedKey+userID, time.Now().Unix(), 0).Err()
 }
 
-func (r *ClientStorage) GetLastModified(userID string) (int64, error) {
+func (r *ClientStorage) GetLastSync(userID string) (int64, error) {
 	return r.rdb.Get(context.Background(), lastModifiedKey+userID).Int64()
 }

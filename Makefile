@@ -3,3 +3,6 @@ up:
 
 down:
 	docker-compose down
+
+client-run:
+	go run cmd/keeperclient/main.go

@@ -33,35 +33,39 @@ func (s *StorageServer) SetData(ctx context.Context, in *pb.Value) (*pb.Response
 	switch tp := in.Kind.(type) {
 	case *pb.Value_LoginPassword:
 		if err := s.Service.SetLoginPasswordData(userID, models.LoginPasswordData{
-			Description: tp.LoginPassword.Description,
-			Login:       tp.LoginPassword.Login,
-			Password:    tp.LoginPassword.Password,
+			Description:  tp.LoginPassword.Description,
+			Login:        tp.LoginPassword.Login,
+			Password:     tp.LoginPassword.Password,
+			LastModified: tp.LoginPassword.LastModified,
 		}); err != nil {
 			log.Error().Err(err).Send()
 			return &pb.ResponseStatus{Status: pb.ResponseStatus_FAIL}, status.Error(codes.Internal, "server error")
 		}
 	case *pb.Value_Text:
 		if err := s.Service.SetTextData(userID, models.TextData{
-			Description: tp.Text.Description,
-			Data:        tp.Text.Data,
+			Description:  tp.Text.Description,
+			Data:         tp.Text.Data,
+			LastModified: tp.Text.LastModified,
 		}); err != nil {
 			log.Error().Err(err).Send()
 			return &pb.ResponseStatus{Status: pb.ResponseStatus_FAIL}, status.Error(codes.Internal, "server error")
 		}
 	case *pb.Value_BinData:
 		if err := s.Service.SetBinaryData(userID, models.BinaryData{
-			Description: tp.BinData.Description,
-			Data:        tp.BinData.Data,
+			Description:  tp.BinData.Description,
+			Data:         tp.BinData.Data,
+			LastModified: tp.BinData.LastModified,
 		}); err != nil {
 			log.Error().Err(err).Send()
 			return &pb.ResponseStatus{Status: pb.ResponseStatus_FAIL}, status.Error(codes.Internal, "server error")
 		}
 	case *pb.Value_CardData:
 		if err := s.Service.SetBankCardData(userID, models.BankCardData{
-			Description: tp.CardData.Description,
-			Number:      tp.CardData.Number,
-			ValidThru:   tp.CardData.ValidThru,
-			CVV:         tp.CardData.Cvv,
+			Description:  tp.CardData.Description,
+			Number:       tp.CardData.Number,
+			ValidThru:    tp.CardData.ValidThru,
+			CVV:          tp.CardData.Cvv,
+			LastModified: tp.CardData.LastModified,
 		}); err != nil {
 			log.Error().Err(err).Send()
 			return &pb.ResponseStatus{Status: pb.ResponseStatus_FAIL}, status.Error(codes.Internal, "server error")
@@ -74,7 +78,7 @@ func (s *StorageServer) SetData(ctx context.Context, in *pb.Value) (*pb.Response
 	}, nil
 }
 
-/*func (s *StorageServer) GetData(ctx context.Context, in *pb.Key) (*pb.Value, error) {
+func (s *StorageServer) Sync(ctx context.Context, in *pb.SyncRequest) (*pb.DataArray, error) {
 	var userID string
 	if md, ok := metadata.FromOutgoingContext(ctx); ok {
 		values := md.Get("user_id")
@@ -86,70 +90,7 @@ func (s *StorageServer) SetData(ctx context.Context, in *pb.Value) (*pb.Response
 		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
 	}
 
-	data, err := s.Service.GetData(in.Key, userID)
-	if err != nil {
-		log.Error().Err(err).Send()
-		return nil, err
-	}
-
-	switch t := data.(type) {
-	case models.LoginPasswordData:
-		return &pb.Value{
-			Kind: &pb.Value_LoginPassword{
-				LoginPassword: &pb.LoginPasswordData{
-					Login:       t.Login,
-					Password:    t.Password,
-					Description: t.Description,
-				},
-			},
-		}, nil
-	case models.TextData:
-		return &pb.Value{
-			Kind: &pb.Value_Text{
-				Text: &pb.TextData{
-					Data:        t.Data,
-					Description: t.Description,
-				},
-			},
-		}, nil
-	case models.BinaryData:
-		return &pb.Value{
-			Kind: &pb.Value_BinData{
-				BinData: &pb.BinaryData{
-					Data:        t.Data,
-					Description: t.Description,
-				},
-			},
-		}, nil
-	case models.BankCardData:
-		return &pb.Value{
-			Kind: &pb.Value_CardData{
-				CardData: &pb.BankCardData{
-					Number:      t.Number,
-					ValidThru:   t.ValidThru,
-					Cvv:         t.CVV,
-					Description: t.Description,
-				},
-			},
-		}, nil
-	}
-
-	return nil, status.Error(codes.Internal, "server error")
-}*/
-
-func (s *StorageServer) GetDataArray(ctx context.Context, in *pb.Empty) (*pb.DataArray, error) {
-	var userID string
-	if md, ok := metadata.FromOutgoingContext(ctx); ok {
-		values := md.Get("user_id")
-		if len(values) > 0 {
-			userID = values[0]
-		}
-	}
-	if userID == "" {
-		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
-	}
-
-	dataArray, err := s.Service.GetDataArray(userID)
+	dataArray, err := s.Service.Sync(in.LastSync, userID)
 	if err != nil {
 		log.Error().Err(err).Send()
 		return nil, err
@@ -163,9 +104,10 @@ func (s *StorageServer) GetDataArray(ctx context.Context, in *pb.Empty) (*pb.Dat
 			tmp = &pb.Value{
 				Kind: &pb.Value_LoginPassword{
 					LoginPassword: &pb.LoginPasswordData{
-						Login:       t.Login,
-						Password:    t.Password,
-						Description: t.Description,
+						Login:        t.Login,
+						Password:     t.Password,
+						Description:  t.Description,
+						LastModified: t.LastModified,
 					},
 				},
 			}
@@ -173,8 +115,9 @@ func (s *StorageServer) GetDataArray(ctx context.Context, in *pb.Empty) (*pb.Dat
 			tmp = &pb.Value{
 				Kind: &pb.Value_Text{
 					Text: &pb.TextData{
-						Data:        t.Data,
-						Description: t.Description,
+						Data:         t.Data,
+						Description:  t.Description,
+						LastModified: t.LastModified,
 					},
 				},
 			}
@@ -182,8 +125,9 @@ func (s *StorageServer) GetDataArray(ctx context.Context, in *pb.Empty) (*pb.Dat
 			tmp = &pb.Value{
 				Kind: &pb.Value_BinData{
 					BinData: &pb.BinaryData{
-						Data:        t.Data,
-						Description: t.Description,
+						Data:         t.Data,
+						Description:  t.Description,
+						LastModified: t.LastModified,
 					},
 				},
 			}
@@ -191,10 +135,11 @@ func (s *StorageServer) GetDataArray(ctx context.Context, in *pb.Empty) (*pb.Dat
 			tmp = &pb.Value{
 				Kind: &pb.Value_CardData{
 					CardData: &pb.BankCardData{
-						Number:      t.Number,
-						ValidThru:   t.ValidThru,
-						Cvv:         t.CVV,
-						Description: t.Description,
+						Number:       t.Number,
+						ValidThru:    t.ValidThru,
+						Cvv:          t.CVV,
+						Description:  t.Description,
+						LastModified: t.LastModified,
 					},
 				},
 			}
@@ -220,35 +165,39 @@ func (s *StorageServer) UpdateData(ctx context.Context, in *pb.Value) (*pb.Respo
 	switch tp := in.Kind.(type) {
 	case *pb.Value_LoginPassword:
 		if err := s.Service.UpdateLoginPasswordData(userID, models.LoginPasswordData{
-			Description: tp.LoginPassword.Description,
-			Login:       tp.LoginPassword.Login,
-			Password:    tp.LoginPassword.Password,
+			Description:  tp.LoginPassword.Description,
+			Login:        tp.LoginPassword.Login,
+			Password:     tp.LoginPassword.Password,
+			LastModified: tp.LoginPassword.LastModified,
 		}); err != nil {
 			log.Error().Err(err).Send()
 			return &pb.ResponseStatus{Status: pb.ResponseStatus_FAIL}, status.Error(codes.Internal, "server error")
 		}
 	case *pb.Value_Text:
 		if err := s.Service.UpdateTextData(userID, models.TextData{
-			Description: tp.Text.Description,
-			Data:        tp.Text.Data,
+			Description:  tp.Text.Description,
+			Data:         tp.Text.Data,
+			LastModified: tp.Text.LastModified,
 		}); err != nil {
 			log.Error().Err(err).Send()
 			return &pb.ResponseStatus{Status: pb.ResponseStatus_FAIL}, status.Error(codes.Internal, "server error")
 		}
 	case *pb.Value_BinData:
 		if err := s.Service.UpdateBinaryData(userID, models.BinaryData{
-			Description: tp.BinData.Description,
-			Data:        tp.BinData.Data,
+			Description:  tp.BinData.Description,
+			Data:         tp.BinData.Data,
+			LastModified: tp.BinData.LastModified,
 		}); err != nil {
 			log.Error().Err(err).Send()
 			return &pb.ResponseStatus{Status: pb.ResponseStatus_FAIL}, status.Error(codes.Internal, "server error")
 		}
 	case *pb.Value_CardData:
 		if err := s.Service.UpdateBankCardData(userID, models.BankCardData{
-			Description: tp.CardData.Description,
-			Number:      tp.CardData.Number,
-			ValidThru:   tp.CardData.ValidThru,
-			CVV:         tp.CardData.Cvv,
+			Description:  tp.CardData.Description,
+			Number:       tp.CardData.Number,
+			ValidThru:    tp.CardData.ValidThru,
+			CVV:          tp.CardData.Cvv,
+			LastModified: tp.CardData.LastModified,
 		}); err != nil {
 			log.Error().Err(err).Send()
 			return &pb.ResponseStatus{Status: pb.ResponseStatus_FAIL}, status.Error(codes.Internal, "server error")

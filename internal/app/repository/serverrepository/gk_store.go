@@ -23,8 +23,8 @@ func (r *KeeperRepository) SetLoginPasswordData(userID string, data models.Login
 		return fmt.Errorf("insert in users_descriptions table failed with error: %w", err)
 	}
 
-	_, err = tx.Exec(context.Background(), `INSERT INTO login_password (description, login, password, user_id) values($1, $2, $3, $4)`,
-		data.Description, data.Login, data.Password, userID)
+	_, err = tx.Exec(context.Background(), `INSERT INTO login_password (description, login, password, user_id, last_modified) values($1, $2, $3, $4, $5)`,
+		data.Description, data.Login, data.Password, userID, data.LastModified)
 	if err != nil {
 		return fmt.Errorf("insert in login_password table failed with error: %w", err)
 	}
@@ -50,8 +50,8 @@ func (r *KeeperRepository) SetTextData(userID string, data models.TextData) erro
 		return fmt.Errorf("insert in users_descriptions table failed with error: %w", err)
 	}
 
-	_, err = tx.Exec(context.Background(), `INSERT INTO text_data (description, data, user_id) values($1, $2, $3)`,
-		data.Description, data.Data, userID)
+	_, err = tx.Exec(context.Background(), `INSERT INTO text_data (description, data, user_id, last_modified) values($1, $2, $3, $4)`,
+		data.Description, data.Data, userID, data.LastModified)
 	if err != nil {
 		return fmt.Errorf("insert in text_data table failed with error: %w", err)
 	}
@@ -77,8 +77,8 @@ func (r *KeeperRepository) SetBinaryData(userID string, data models.BinaryData) 
 		return fmt.Errorf("insert in users_descriptions table failed with error: %w", err)
 	}
 
-	_, err = r.db.Exec(context.Background(), `INSERT INTO binary_data (description, data, user_id) values($1, $2, $3)`,
-		data.Description, data.Data, userID)
+	_, err = r.db.Exec(context.Background(), `INSERT INTO binary_data (description, data, user_id, last_modified) values($1, $2, $3, $4)`,
+		data.Description, data.Data, userID, data.LastModified)
 	if err != nil {
 		return fmt.Errorf("insert in binary_data table failed with error: %w", err)
 	}
@@ -104,8 +104,8 @@ func (r *KeeperRepository) SetBankCardData(userID string, data models.BankCardDa
 		return fmt.Errorf("insert in users_descriptions table failed with error: %w", err)
 	}
 
-	_, err = r.db.Exec(context.Background(), `INSERT INTO backcard_data (description, number, valid_thru, cvv, user_id) values($1, $2, $3, $4, $5)`,
-		data.Description, data.Number, data.ValidThru, data.CVV, userID)
+	_, err = r.db.Exec(context.Background(), `INSERT INTO backcard_data (description, number, valid_thru, cvv, user_id, last_modified) values($1, $2, $3, $4, $5, $6)`,
+		data.Description, data.Number, data.ValidThru, data.CVV, userID, data.LastModified)
 	if err != nil {
 		return fmt.Errorf("insert in backcard_data table failed with error: %w", err)
 	}
@@ -118,53 +118,65 @@ func (r *KeeperRepository) SetBankCardData(userID string, data models.BankCardDa
 	return nil
 }
 
-func (r *KeeperRepository) GetDataArray(userID string) ([]any, error) {
+func (r *KeeperRepository) Sync(last_sync int64, userID string) ([]any, error) {
 	var result []any = []any{}
 
-	rows, err := r.db.Query(context.Background(), `SELECT description, login, password FROM login_password WHERE user_id=$1`, userID)
+	rows, err := r.db.Query(context.Background(), `SELECT description, login, password FROM login_password WHERE user_id=$1 AND last_modified > $2`, userID, last_sync)
 	if err != nil {
 		return nil, fmt.Errorf("select data array failed with error: %w", err)
 	}
 
 	for rows.Next() {
 		var tmp models.LoginPasswordData
-		rows.Scan(&tmp.Description, &tmp.Login, &tmp.Password)
+		err := rows.Scan(&tmp.Description, &tmp.Login, &tmp.Password)
+		if err != nil {
+			return nil, fmt.Errorf("scan failed with error: %w", err)
+		}
 		result = append(result, tmp)
 	}
 	rows.Close()
 
-	rows, err = r.db.Query(context.Background(), `SELECT description, data FROM text_data WHERE user_id=$1`, userID)
+	rows, err = r.db.Query(context.Background(), `SELECT description, data FROM text_data WHERE user_id=$1 AND last_modified > $2`, userID, last_sync)
 	if err != nil {
 		return nil, fmt.Errorf("select data array failed with error: %w", err)
 	}
 
 	for rows.Next() {
 		var tmp models.TextData
-		rows.Scan(&tmp.Description, &tmp.Data)
+		err = rows.Scan(&tmp.Description, &tmp.Data)
+		if err != nil {
+			return nil, fmt.Errorf("scan failed with error: %w", err)
+		}
 		result = append(result, tmp)
 	}
 	rows.Close()
 
-	rows, err = r.db.Query(context.Background(), `SELECT description, data FROM binary_data WHERE user_id=$1`, userID)
+	rows, err = r.db.Query(context.Background(), `SELECT description, data FROM binary_data WHERE user_id=$1 AND last_modified > $2`, userID, last_sync)
 	if err != nil {
 		return nil, fmt.Errorf("select data array failed with error: %w", err)
 	}
 
 	for rows.Next() {
 		var tmp models.BinaryData
-		rows.Scan(&tmp.Description, &tmp.Data)
+		err = rows.Scan(&tmp.Description, &tmp.Data)
+		if err != nil {
+			return nil, fmt.Errorf("scan failed with error: %w", err)
+		}
 		result = append(result, tmp)
 	}
 	rows.Close()
 
-	rows, err = r.db.Query(context.Background(), `SELECT description, number, valid_thru, cvv FROM backcard_data WHERE user_id=$1`, userID)
+	rows, err = r.db.Query(context.Background(), `SELECT description, number, valid_thru, cvv FROM backcard_data WHERE user_id=$1 AND last_modified > $2`, userID, last_sync)
 	if err != nil {
 		return nil, fmt.Errorf("select data array failed with error: %w", err)
 	}
 
 	for rows.Next() {
 		var tmp models.BankCardData
-		rows.Scan(&tmp.Description, &tmp.Number, &tmp.ValidThru, &tmp.CVV)
+		err = rows.Scan(&tmp.Description, &tmp.Number, &tmp.ValidThru, &tmp.CVV)
+		if err != nil {
+			return nil, fmt.Errorf("scan failed with error: %w", err)
+		}
 		result = append(result, tmp)
 	}
 	rows.Close()
@@ -198,6 +210,10 @@ func (r *KeeperRepository) UpdateLoginPasswordData(userID string, data models.Lo
 		counter++
 	}
 
+	set = append(set, "last_modified=$"+strconv.Itoa(counter))
+	values = append(values, data.LastModified)
+	counter++
+
 	query := fmt.Sprintf(`UPDATE login_password SET %s WHERE description=$%d and user_id=$%d)`, strings.Join(set, ", "), counter, counter+1)
 	values = append(values, data.Description, userID)
 
@@ -224,6 +240,10 @@ func (r *KeeperRepository) UpdateTextData(userID string, data models.TextData) e
 		counter++
 	}
 
+	set = append(set, "last_modified=$"+strconv.Itoa(counter))
+	values = append(values, data.LastModified)
+	counter++
+
 	query := fmt.Sprintf(`UPDATE text_data SET %s  WHERE description=$%d and user_id=$%d)`, strings.Join(set, ", "), counter, counter+1)
 	values = append(values, data.Description, userID)
 
@@ -249,6 +269,10 @@ func (r *KeeperRepository) UpdateBinaryData(userID string, data models.BinaryDat
 		values = append(values, data.Data)
 		counter++
 	}
+
+	set = append(set, "last_modified=$"+strconv.Itoa(counter))
+	values = append(values, data.LastModified)
+	counter++
 
 	query := fmt.Sprintf(`UPDATE binary_data SET %s WHERE description=$%d and user_id=$%d)`, strings.Join(set, ", "), counter, counter+1)
 	values = append(values, data.Description, userID)
@@ -287,6 +311,10 @@ func (r *KeeperRepository) UpdateBankCardData(userID string, data models.BankCar
 		values = append(values, data.CVV)
 		counter++
 	}
+
+	set = append(set, "last_modified=$"+strconv.Itoa(counter))
+	values = append(values, data.LastModified)
+	counter++
 
 	query := fmt.Sprintf(`UPDATE backcard_data SET %s WHERE description=$%d and user_id=$%d)`, strings.Join(set, ", "), counter, counter+1)
 	values = append(values, data.Description, userID)

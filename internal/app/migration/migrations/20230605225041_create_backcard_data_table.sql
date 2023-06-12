@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS backcard_data
     valid_thru text not null,
     cvv text not null,
     user_id text,
-    last_modified timestamp default now(),
+    last_modified int,
     CONSTRAINT fk_bankcard_data
         FOREIGN KEY(description, user_id)
             REFERENCES users_descriptions(description, user_id) ON DELETE CASCADE,
