@@ -214,12 +214,12 @@ func (r *KeeperRepository) UpdateLoginPasswordData(userID string, data models.Lo
 	values = append(values, data.LastModified)
 	counter++
 
-	query := fmt.Sprintf(`UPDATE login_password SET %s WHERE description=$%d and user_id=$%d)`, strings.Join(set, ", "), counter, counter+1)
+	query := fmt.Sprintf(`UPDATE login_password SET %s WHERE description=$%d and user_id=$%d`, strings.Join(set, ", "), counter, counter+1)
 	values = append(values, data.Description, userID)
 
 	updateTag, err := r.db.Exec(context.Background(), query, values...)
 	if err != nil {
-		return fmt.Errorf("insert in login_password table failed with error: %w", err)
+		return fmt.Errorf("update login_password table failed with error: %w", err)
 	}
 
 	if updateTag.RowsAffected() == 0 {
@@ -244,12 +244,12 @@ func (r *KeeperRepository) UpdateTextData(userID string, data models.TextData) e
 	values = append(values, data.LastModified)
 	counter++
 
-	query := fmt.Sprintf(`UPDATE text_data SET %s  WHERE description=$%d and user_id=$%d)`, strings.Join(set, ", "), counter, counter+1)
+	query := fmt.Sprintf(`UPDATE text_data SET %s  WHERE description=$%d and user_id=$%d`, strings.Join(set, ", "), counter, counter+1)
 	values = append(values, data.Description, userID)
 
 	updateTag, err := r.db.Exec(context.Background(), query, values...)
 	if err != nil {
-		return fmt.Errorf("insert in text_data table failed with error: %w", err)
+		return fmt.Errorf("update text_data table failed with error: %w", err)
 	}
 
 	if updateTag.RowsAffected() == 0 {
@@ -274,12 +274,12 @@ func (r *KeeperRepository) UpdateBinaryData(userID string, data models.BinaryDat
 	values = append(values, data.LastModified)
 	counter++
 
-	query := fmt.Sprintf(`UPDATE binary_data SET %s WHERE description=$%d and user_id=$%d)`, strings.Join(set, ", "), counter, counter+1)
+	query := fmt.Sprintf(`UPDATE binary_data SET %s WHERE description=$%d and user_id=$%d`, strings.Join(set, ", "), counter, counter+1)
 	values = append(values, data.Description, userID)
 
 	updateTag, err := r.db.Exec(context.Background(), query, values...)
 	if err != nil {
-		return fmt.Errorf("insert in binary_data table failed with error: %w", err)
+		return fmt.Errorf("update binary_data table failed with error: %w", err)
 	}
 
 	if updateTag.RowsAffected() == 0 {
@@ -316,12 +316,12 @@ func (r *KeeperRepository) UpdateBankCardData(userID string, data models.BankCar
 	values = append(values, data.LastModified)
 	counter++
 
-	query := fmt.Sprintf(`UPDATE backcard_data SET %s WHERE description=$%d and user_id=$%d)`, strings.Join(set, ", "), counter, counter+1)
+	query := fmt.Sprintf(`UPDATE backcard_data SET %s WHERE description=$%d and user_id=$%d`, strings.Join(set, ", "), counter, counter+1)
 	values = append(values, data.Description, userID)
 
 	updateTag, err := r.db.Exec(context.Background(), query, values...)
 	if err != nil {
-		return fmt.Errorf("insert in backcard_data table failed with error: %w", err)
+		return fmt.Errorf("update backcard_data table failed with error: %w", err)
 	}
 
 	if updateTag.RowsAffected() == 0 {
