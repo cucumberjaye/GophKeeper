@@ -700,12 +700,7 @@ func (c *KeeperClient) sync() {
 	if err != nil {
 		log.Debug().Err(err).Send()
 	}
-	resp, err := c.storeClient.Sync(ctx, &pb.SyncRequest{LastSync: lastSync})
-	if err != nil {
-		log.Debug().Err(err).Send()
-	}
-
-	err = c.repo.SetLastSync(c.userID)
+	resp, err := c.storeClient.Sync(ctx, &pb.Empty{})
 	if err != nil {
 		log.Debug().Err(err).Send()
 	}
@@ -714,39 +709,70 @@ func (c *KeeperClient) sync() {
 		return
 	}
 
+	exsits, err := c.repo.GetAllUserKeys(c.userID)
+	if err != nil {
+		log.Debug().Err(err).Send()
+		return
+	}
+
 	for i := range resp.Values {
 		switch t := resp.Values[i].Kind.(type) {
 		case *pb.Value_LoginPassword:
-			err = c.repo.SetLoginPasswordsData(models.LoginPasswordData{
-				Description:  t.LoginPassword.Description,
-				Login:        t.LoginPassword.Login,
-				Password:     t.LoginPassword.Password,
-				LastModified: t.LoginPassword.LastModified,
-			}, c.userID)
+			if t.LoginPassword.LastModified > lastSync {
+				err = c.repo.SetLoginPasswordsData(models.LoginPasswordData{
+					Description:  t.LoginPassword.Description,
+					Login:        t.LoginPassword.Login,
+					Password:     t.LoginPassword.Password,
+					LastModified: t.LoginPassword.LastModified,
+				}, c.userID)
+			}
+			delete(exsits, t.LoginPassword.Description)
 		case *pb.Value_Text:
-			err = c.repo.SetTextData(models.TextData{
-				Description:  t.Text.Description,
-				Data:         t.Text.Data,
-				LastModified: t.Text.LastModified,
-			}, c.userID)
+			if t.Text.LastModified > lastSync {
+				err = c.repo.SetTextData(models.TextData{
+					Description:  t.Text.Description,
+					Data:         t.Text.Data,
+					LastModified: t.Text.LastModified,
+				}, c.userID)
+			}
+			delete(exsits, t.Text.Description)
 		case *pb.Value_BinData:
-			err = c.repo.SetBinaryData(models.BinaryData{
-				Description:  t.BinData.Description,
-				Data:         t.BinData.Data,
-				LastModified: t.BinData.LastModified,
-			}, c.userID)
+			if t.BinData.LastModified > lastSync {
+				err = c.repo.SetBinaryData(models.BinaryData{
+					Description:  t.BinData.Description,
+					Data:         t.BinData.Data,
+					LastModified: t.BinData.LastModified,
+				}, c.userID)
+			}
+			delete(exsits, t.BinData.Description)
 		case *pb.Value_CardData:
-			err = c.repo.SetBankCardData(models.BankCardData{
-				Description:  t.CardData.Description,
-				Number:       t.CardData.Number,
-				ValidThru:    t.CardData.ValidThru,
-				CVV:          t.CardData.Cvv,
-				LastModified: t.CardData.LastModified,
-			}, c.userID)
+			if t.CardData.LastModified > lastSync {
+				err = c.repo.SetBankCardData(models.BankCardData{
+					Description:  t.CardData.Description,
+					Number:       t.CardData.Number,
+					ValidThru:    t.CardData.ValidThru,
+					CVV:          t.CardData.Cvv,
+					LastModified: t.CardData.LastModified,
+				}, c.userID)
+			}
+			delete(exsits, t.CardData.Description)
 		}
 
 		if err != nil {
 			log.Debug().Err(err).Send()
 		}
 	}
+
+	for key, delFun := range exsits {
+		err = delFun(key, c.userID)
+		if err != nil {
+			log.Debug().Err(err).Send()
+		}
+	}
+
+	err = c.repo.SetLastSync(c.userID)
+	if err != nil {
+		log.Debug().Err(err).Send()
+	}
+
 }

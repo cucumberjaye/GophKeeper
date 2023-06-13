@@ -19,7 +19,7 @@ type StoreService interface {
 	SetTextData(userID string, data models.TextData) error
 	SetBinaryData(userID string, data models.BinaryData) error
 	SetBankCardData(userID string, data models.BankCardData) error
-	Sync(last_sync int64, userID string) ([]any, error)
+	Sync(userID string) ([]any, error)
 	DeleteData(key, userID string) error
 	UpdateLoginPasswordData(userID string, data models.LoginPasswordData) error
 	UpdateTextData(userID string, data models.TextData) error

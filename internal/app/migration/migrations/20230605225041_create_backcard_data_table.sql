@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS backcard_data
+CREATE TABLE IF NOT EXISTS bankcard_data
 (
     description text,
     number text not null,
@@ -17,5 +17,5 @@ CREATE TABLE IF NOT EXISTS backcard_data
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE backcard_data;
+DROP TABLE bankcard_data;
 -- +goose StatementEnd

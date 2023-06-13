@@ -50,13 +50,11 @@ message Value {
   }
 }
 
-message SyncRequest {
-    int64 last_sync = 1;
-}
+message Empty {}
 
 service Storage {
     rpc SetData (Value) returns (ResponseStatus);
-    rpc Sync(SyncRequest) returns (DataArray);
+    rpc Sync(Empty) returns (DataArray);
     rpc UpdateData(Value) returns (ResponseStatus);
     rpc DeleteData(Key) returns (ResponseStatus);
 }

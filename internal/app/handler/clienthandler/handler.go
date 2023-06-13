@@ -37,6 +37,7 @@ type ClientRepository interface {
 	SetBinaryData(data models.BinaryData, userID string) error
 	SetBankCardData(data models.BankCardData, userID string) error
 	GetDataArray(userID string) ([]any, error)
+	GetAllUserKeys(userID string) (map[string]func(string, string) error, error)
 	UpdateLoginPasswordsData(data models.LoginPasswordData, userID string) error
 	UpdateTextData(data models.TextData, userID string) error
 	UpdateBinaryData(data models.BinaryData, userID string) error

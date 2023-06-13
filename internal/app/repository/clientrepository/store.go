@@ -3,6 +3,7 @@ package clientrepository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cucumberjaye/GophKeeper/internal/app/models"
@@ -38,25 +39,25 @@ func (r *ClientStorage) GetDataArray(userID string) ([]any, error) {
 		return nil, fmt.Errorf("get keys failed with error: %w", err)
 	}
 
-	result := make([]any, len(keys))
+	result := make([]any, 0)
 	for i := range keys {
 		switch keys[i][:2] {
 		case loginPasswordData:
 			var tmp models.LoginPasswordData
 			_ = r.rdb.HGetAll(context.Background(), keys[i]).Scan(&tmp)
-			result[i] = tmp
+			result = append(result, tmp)
 		case textData:
 			var tmp models.TextData
 			_ = r.rdb.HGetAll(context.Background(), keys[i]).Scan(&tmp)
-			result[i] = tmp
+			result = append(result, tmp)
 		case binaryData:
 			var tmp models.BinaryData
 			_ = r.rdb.HGetAll(context.Background(), keys[i]).Scan(&tmp)
-			result[i] = tmp
+			result = append(result, tmp)
 		case bankCardData:
 			var tmp models.BankCardData
 			_ = r.rdb.HGetAll(context.Background(), keys[i]).Scan(&tmp)
-			result[i] = tmp
+			result = append(result, tmp)
 		}
 	}
 
@@ -137,4 +138,27 @@ func (r *ClientStorage) SetLastSync(userID string) error {
 
 func (r *ClientStorage) GetLastSync(userID string) (int64, error) {
 	return r.rdb.Get(context.Background(), lastModifiedKey+userID).Int64()
+}
+
+func (r *ClientStorage) GetAllUserKeys(userID string) (map[string]func(string, string) error, error) {
+	keys, err := r.rdb.Keys(context.Background(), fmt.Sprintf("*%s", userID)).Result()
+	if err != nil {
+		return nil, fmt.Errorf("get keys failed with error: %w", err)
+	}
+
+	res := make(map[string]func(string, string) error, len(keys))
+	for i := range keys {
+		switch keys[i][:2] {
+		case loginPasswordData:
+			res[strings.Split(keys[i], ":")[1]] = r.DeleteLoginPasswordData
+		case textData:
+			res[strings.Split(keys[i], ":")[1]] = r.DeleteTextData
+		case binaryData:
+			res[strings.Split(keys[i], ":")[1]] = r.DeleteBinaryData
+		case bankCardData:
+			res[strings.Split(keys[i], ":")[1]] = r.DeleteBankCardData
+		}
+	}
+
+	return res, nil
 }

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/cucumberjaye/GophKeeper/internal/app/models"
-	"github.com/jackc/pgx/v4"
 )
 
 func (r *KeeperRepository) SetLoginPasswordData(userID string, data models.LoginPasswordData) error {
@@ -104,10 +103,10 @@ func (r *KeeperRepository) SetBankCardData(userID string, data models.BankCardDa
 		return fmt.Errorf("insert in users_descriptions table failed with error: %w", err)
 	}
 
-	_, err = r.db.Exec(context.Background(), `INSERT INTO backcard_data (description, number, valid_thru, cvv, user_id, last_modified) values($1, $2, $3, $4, $5, $6)`,
+	_, err = r.db.Exec(context.Background(), `INSERT INTO bankcard_data (description, number, valid_thru, cvv, user_id, last_modified) values($1, $2, $3, $4, $5, $6)`,
 		data.Description, data.Number, data.ValidThru, data.CVV, userID, data.LastModified)
 	if err != nil {
-		return fmt.Errorf("insert in backcard_data table failed with error: %w", err)
+		return fmt.Errorf("insert in bankcard_data table failed with error: %w", err)
 	}
 
 	err = tx.Commit(context.Background())
@@ -118,10 +117,10 @@ func (r *KeeperRepository) SetBankCardData(userID string, data models.BankCardDa
 	return nil
 }
 
-func (r *KeeperRepository) Sync(last_sync int64, userID string) ([]any, error) {
+func (r *KeeperRepository) Sync(userID string) ([]any, error) {
 	var result []any = []any{}
 
-	rows, err := r.db.Query(context.Background(), `SELECT description, login, password FROM login_password WHERE user_id=$1 AND last_modified > $2`, userID, last_sync)
+	rows, err := r.db.Query(context.Background(), `SELECT description, login, password FROM login_password WHERE user_id=$1`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("select data array failed with error: %w", err)
 	}
@@ -136,7 +135,7 @@ func (r *KeeperRepository) Sync(last_sync int64, userID string) ([]any, error) {
 	}
 	rows.Close()
 
-	rows, err = r.db.Query(context.Background(), `SELECT description, data FROM text_data WHERE user_id=$1 AND last_modified > $2`, userID, last_sync)
+	rows, err = r.db.Query(context.Background(), `SELECT description, data FROM text_data WHERE user_id=$1`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("select data array failed with error: %w", err)
 	}
@@ -151,7 +150,7 @@ func (r *KeeperRepository) Sync(last_sync int64, userID string) ([]any, error) {
 	}
 	rows.Close()
 
-	rows, err = r.db.Query(context.Background(), `SELECT description, data FROM binary_data WHERE user_id=$1 AND last_modified > $2`, userID, last_sync)
+	rows, err = r.db.Query(context.Background(), `SELECT description, data FROM binary_data WHERE user_id=$1`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("select data array failed with error: %w", err)
 	}
@@ -166,7 +165,7 @@ func (r *KeeperRepository) Sync(last_sync int64, userID string) ([]any, error) {
 	}
 	rows.Close()
 
-	rows, err = r.db.Query(context.Background(), `SELECT description, number, valid_thru, cvv FROM backcard_data WHERE user_id=$1 AND last_modified > $2`, userID, last_sync)
+	rows, err = r.db.Query(context.Background(), `SELECT description, number, valid_thru, cvv FROM bankcard_data WHERE user_id=$1`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("select data array failed with error: %w", err)
 	}
@@ -210,11 +209,12 @@ func (r *KeeperRepository) UpdateLoginPasswordData(userID string, data models.Lo
 		counter++
 	}
 
+	lastModifiedPlace := counter
 	set = append(set, "last_modified=$"+strconv.Itoa(counter))
 	values = append(values, data.LastModified)
 	counter++
 
-	query := fmt.Sprintf(`UPDATE login_password SET %s WHERE description=$%d and user_id=$%d`, strings.Join(set, ", "), counter, counter+1)
+	query := fmt.Sprintf(`UPDATE login_password SET %s WHERE description=$%d and user_id=$%d and last_modified<=$%d`, strings.Join(set, ", "), counter, counter+1, lastModifiedPlace)
 	values = append(values, data.Description, userID)
 
 	updateTag, err := r.db.Exec(context.Background(), query, values...)
@@ -223,7 +223,7 @@ func (r *KeeperRepository) UpdateLoginPasswordData(userID string, data models.Lo
 	}
 
 	if updateTag.RowsAffected() == 0 {
-		return fmt.Errorf("no rows affected: %w", pgx.ErrNoRows)
+		return ErrUpdateLate
 	}
 
 	return nil
@@ -240,11 +240,12 @@ func (r *KeeperRepository) UpdateTextData(userID string, data models.TextData) e
 		counter++
 	}
 
+	lastModifiedPlace := counter
 	set = append(set, "last_modified=$"+strconv.Itoa(counter))
 	values = append(values, data.LastModified)
 	counter++
 
-	query := fmt.Sprintf(`UPDATE text_data SET %s  WHERE description=$%d and user_id=$%d`, strings.Join(set, ", "), counter, counter+1)
+	query := fmt.Sprintf(`UPDATE text_data SET %s  WHERE description=$%d and user_id=$%d and last_modified<=$%d`, strings.Join(set, ", "), counter, counter+1, lastModifiedPlace)
 	values = append(values, data.Description, userID)
 
 	updateTag, err := r.db.Exec(context.Background(), query, values...)
@@ -253,7 +254,7 @@ func (r *KeeperRepository) UpdateTextData(userID string, data models.TextData) e
 	}
 
 	if updateTag.RowsAffected() == 0 {
-		return fmt.Errorf("no rows affected: %w", pgx.ErrNoRows)
+		return ErrUpdateLate
 	}
 
 	return nil
@@ -270,11 +271,12 @@ func (r *KeeperRepository) UpdateBinaryData(userID string, data models.BinaryDat
 		counter++
 	}
 
+	lastModifiedPlace := counter
 	set = append(set, "last_modified=$"+strconv.Itoa(counter))
 	values = append(values, data.LastModified)
 	counter++
 
-	query := fmt.Sprintf(`UPDATE binary_data SET %s WHERE description=$%d and user_id=$%d`, strings.Join(set, ", "), counter, counter+1)
+	query := fmt.Sprintf(`UPDATE binary_data SET %s WHERE description=$%d and user_id=$%d and last_modified<=$%d`, strings.Join(set, ", "), counter, counter+1, lastModifiedPlace)
 	values = append(values, data.Description, userID)
 
 	updateTag, err := r.db.Exec(context.Background(), query, values...)
@@ -283,7 +285,7 @@ func (r *KeeperRepository) UpdateBinaryData(userID string, data models.BinaryDat
 	}
 
 	if updateTag.RowsAffected() == 0 {
-		return fmt.Errorf("no rows affected: %w", pgx.ErrNoRows)
+		return ErrUpdateLate
 	}
 
 	return nil
@@ -312,20 +314,21 @@ func (r *KeeperRepository) UpdateBankCardData(userID string, data models.BankCar
 		counter++
 	}
 
+	lastModifiedPlace := counter
 	set = append(set, "last_modified=$"+strconv.Itoa(counter))
 	values = append(values, data.LastModified)
 	counter++
 
-	query := fmt.Sprintf(`UPDATE backcard_data SET %s WHERE description=$%d and user_id=$%d`, strings.Join(set, ", "), counter, counter+1)
+	query := fmt.Sprintf(`UPDATE bankcard_data SET %s WHERE description=$%d and user_id=$%d and last_modified<=$%d`, strings.Join(set, ", "), counter, counter+1, lastModifiedPlace)
 	values = append(values, data.Description, userID)
 
 	updateTag, err := r.db.Exec(context.Background(), query, values...)
 	if err != nil {
-		return fmt.Errorf("update backcard_data table failed with error: %w", err)
+		return fmt.Errorf("update bankcard_data table failed with error: %w", err)
 	}
 
 	if updateTag.RowsAffected() == 0 {
-		return fmt.Errorf("no rows affected: %w", pgx.ErrNoRows)
+		return ErrUpdateLate
 	}
 
 	return nil

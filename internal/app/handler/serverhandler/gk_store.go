@@ -78,7 +78,7 @@ func (s *StorageServer) SetData(ctx context.Context, in *pb.Value) (*pb.Response
 	}, nil
 }
 
-func (s *StorageServer) Sync(ctx context.Context, in *pb.SyncRequest) (*pb.DataArray, error) {
+func (s *StorageServer) Sync(ctx context.Context, in *pb.Empty) (*pb.DataArray, error) {
 	var userID string
 	if md, ok := metadata.FromOutgoingContext(ctx); ok {
 		values := md.Get("user_id")
@@ -90,7 +90,7 @@ func (s *StorageServer) Sync(ctx context.Context, in *pb.SyncRequest) (*pb.DataA
 		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
 	}
 
-	dataArray, err := s.Service.Sync(in.LastSync, userID)
+	dataArray, err := s.Service.Sync(userID)
 	if err != nil {
 		log.Error().Err(err).Send()
 		return nil, err

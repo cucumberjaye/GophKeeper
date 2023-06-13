@@ -9,6 +9,7 @@ import (
 var (
 	ErrUserNotFound = errors.New("user not found")
 	ErrDataNotFound = errors.New("data not found")
+	ErrUpdateLate   = errors.New("data updated from another client early")
 )
 
 type KeeperRepository struct {
