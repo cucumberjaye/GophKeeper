@@ -8,12 +8,12 @@ import (
 
 func main() {
 	zerolog.SetGlobalLevel(zerolog.FatalLevel)
-	a, err := clientapp.New()
+	clientApp, err := clientapp.New()
 	if err != nil {
 		log.Fatal().Err(err).Send()
 	}
 
-	err = a.Run()
+	err = clientApp.Run()
 	if err != nil {
 		log.Fatal().Err(err).Send()
 	}
