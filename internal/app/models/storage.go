@@ -26,3 +26,7 @@ type BankCardData struct {
 	CVV          string `redis:"cvv"`
 	LastModified int64  `redis:"last_modified"`
 }
+
+type DataType interface {
+	LoginPasswordData | TextData | BankCardData | BinaryData
+}
