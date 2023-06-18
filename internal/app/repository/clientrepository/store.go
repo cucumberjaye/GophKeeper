@@ -2,6 +2,7 @@ package clientrepository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,20 +18,19 @@ const (
 	bankCardData      = "cd"
 )
 
-func (r *ClientStorage) SetLoginPasswordsData(data models.LoginPasswordData, userID string) error {
-	return r.rdb.HSet(context.Background(), fmt.Sprintf("%s:%s:%s", loginPasswordData, data.Description, userID), &data).Err()
-}
+func (r *ClientStorage) SetData(data any, userID string) error {
+	switch tp := data.(type) {
+	case models.LoginPasswordData:
+		return r.rdb.HSet(context.Background(), fmt.Sprintf("%s:%s:%s", loginPasswordData, tp.Description, userID), &tp).Err()
+	case models.TextData:
+		return r.rdb.HSet(context.Background(), fmt.Sprintf("%s:%s:%s", textData, tp.Description, userID), &tp).Err()
+	case models.BinaryData:
+		return r.rdb.HSet(context.Background(), fmt.Sprintf("%s:%s:%s", binaryData, tp.Description, userID), &tp).Err()
+	case models.BankCardData:
+		return r.rdb.HMSet(context.Background(), fmt.Sprintf("%s:%s:%s", bankCardData, tp.Description, userID), &tp).Err()
+	}
 
-func (r *ClientStorage) SetTextData(data models.TextData, userID string) error {
-	return r.rdb.HSet(context.Background(), fmt.Sprintf("%s:%s:%s", textData, data.Description, userID), &data).Err()
-}
-
-func (r *ClientStorage) SetBinaryData(data models.BinaryData, userID string) error {
-	return r.rdb.HSet(context.Background(), fmt.Sprintf("%s:%s:%s", binaryData, data.Description, userID), &data).Err()
-}
-
-func (r *ClientStorage) SetBankCardData(data models.BankCardData, userID string) error {
-	return r.rdb.HMSet(context.Background(), fmt.Sprintf("%s:%s:%s", bankCardData, data.Description, userID), &data).Err()
+	return errors.New("attempt to set unknown type")
 }
 
 func (r *ClientStorage) GetDataArray(userID string) ([]any, error) {
@@ -64,7 +64,7 @@ func (r *ClientStorage) GetDataArray(userID string) ([]any, error) {
 	return result, nil
 }
 
-func (r *ClientStorage) UpdateLoginPasswordsData(data models.LoginPasswordData, userID string) error {
+func (r *ClientStorage) UpdateLoginPasswordData(data models.LoginPasswordData, userID string) error {
 	var old models.LoginPasswordData
 	var err error
 	if data.Login == "" || data.Password == "" {

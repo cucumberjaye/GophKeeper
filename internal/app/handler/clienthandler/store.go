@@ -2,652 +2,633 @@ package clienthandler
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/cucumberjaye/GophKeeper/internal/app/models"
 	"github.com/cucumberjaye/GophKeeper/internal/app/pb"
-	"github.com/cucumberjaye/GophKeeper/internal/pkg/utils"
 	"github.com/cucumberjaye/GophKeeper/pkg/encryption"
+	"github.com/rivo/tview"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/metadata"
 )
 
-func (c *KeeperClient) setDataHandler(signal chan os.Signal) {
-	for {
-		var err error
-		fmt.Println("Select number:\n1. SetLoginPasswordData\n2. SetTextData\n3. SetBinaryData\n4. SetBankCardData\n5. Back")
-		number := <-c.rch
-		switch number {
-		case "1":
-			err = c.setLoginPasswordData(signal)
-		case "2":
-			err = c.setTextData(signal)
-		case "3":
-			err = c.setBinaryData(signal)
-		case "4":
-			err = c.setBankCardData(signal)
-		case "5":
-			return
-		default:
-			continue
-		}
+func (c *KeeperClient) createDataMenuForm() tview.Primitive {
+	form := tview.NewTable().SetSelectable(true, false).
+		SetCell(0, 0, tview.NewTableCell("Set data").SetAlign(1).SetExpansion(1)).
+		SetCell(1, 0, tview.NewTableCell("Get data list").SetAlign(1).SetExpansion(1)).
+		SetCell(2, 0, tview.NewTableCell("Exit").SetAlign(1).SetExpansion(1)).
+		SetSelectedFunc(func(row, column int) {
+			switch row {
+			case 0:
+				c.app.SetRoot(c.createSetDataForm(), true)
+			case 1:
+				c.app.SetRoot(c.createGetDataArrayForm(), true)
+			case 2:
+				c.app.Stop()
+			}
+		})
+	form.SetBorder(true).SetTitle("Data Menu")
 
-		if err == nil {
-			break
-		}
-		fmt.Println(err)
-	}
+	return form
 }
 
-func (c *KeeperClient) setLoginPasswordData(signal chan os.Signal) error {
+func (c *KeeperClient) createSetDataForm() tview.Primitive {
+	form := tview.NewTable().SetSelectable(true, false).
+		SetCell(0, 0, tview.NewTableCell("Login password data").SetAlign(1).SetExpansion(1)).
+		SetCell(1, 0, tview.NewTableCell("Text data").SetAlign(1).SetExpansion(1)).
+		SetCell(2, 0, tview.NewTableCell("Binary data").SetAlign(1).SetExpansion(1)).
+		SetCell(3, 0, tview.NewTableCell("Bank card data").SetAlign(1).SetExpansion(1)).
+		SetCell(4, 0, tview.NewTableCell("Data menu").SetAlign(1).SetExpansion(1)).
+		SetSelectedFunc(func(row, column int) {
+			switch row {
+			case 0:
+				c.app.SetRoot(c.createSetLoginPasswordDataForm(), true)
+			case 1:
+				c.app.SetRoot(c.createSetTextDataForm(), true)
+			case 2:
+				c.app.SetRoot(c.createSetBinaryDataForm(), true)
+			case 3:
+				c.app.SetRoot(c.createSetBankCardDataForm(), true)
+			case 4:
+				c.app.SetRoot(c.createDataMenuForm(), true)
+			}
+		})
+	form.SetBorder(true).SetTitle("Set data menu")
+
+	return form
+}
+
+func (c *KeeperClient) createSetLoginPasswordDataForm() tview.Primitive {
 	var login, password, description string
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 
-	for {
-		fmt.Println("SetLoginPasswordData\nEnter your login (press ctrl+C to back on previous page):")
+	form := tview.NewForm().
+		AddInputField("Description", "", 0, nil, func(text string) {
+			description = text
+		}).
+		AddInputField("Login", "", 0, nil, func(text string) {
+			login = text
+		}).
+		AddInputField("Password", "", 0, nil, func(text string) {
+			password = text
+		}).
+		AddButton("OK", func() {
+			defer c.app.SetRoot(c.createSetDataForm(), true)
+			lastModified := time.Now().Unix()
 
-		select {
-		case <-signal:
-			return ErrBack
-		case login = <-c.rch:
-		}
-
-		fmt.Println("Enter your password (press ctrl+C to back on previous page):")
-
-		select {
-		case <-signal:
-			return ErrBack
-		case password = <-c.rch:
-		}
-
-		fmt.Println("Enter description (press ctrl+C to back on previous page):")
-
-		select {
-		case <-signal:
-			return ErrBack
-		case description = <-c.rch:
-		}
-
-		lastModified := time.Now().Unix()
-
-		reqData := &pb.Value{
-			Kind: &pb.Value_LoginPassword{
-				LoginPassword: &pb.LoginPasswordData{
-					Login:        login,
-					Password:     password,
-					Description:  description,
-					LastModified: lastModified,
+			reqData := &pb.Value{
+				Kind: &pb.Value_LoginPassword{
+					LoginPassword: &pb.LoginPasswordData{
+						Login:        login,
+						Password:     password,
+						Description:  description,
+						LastModified: lastModified,
+					},
 				},
-			},
-		}
+			}
 
-		resp, err := c.storeClient.SetData(ctx, reqData)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Println(resp.Comment)
+			_, err := c.storeClient.SetData(ctx, reqData)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 
-		login, _ = encryption.Encrypt(login)
-		password, _ = encryption.Encrypt(password)
-		err = c.repo.SetLoginPasswordsData(models.LoginPasswordData{
-			Description:  description,
-			Login:        login,
-			Password:     password,
-			LastModified: lastModified,
-		}, c.userID)
-		if err != nil {
-			fmt.Println(err)
-		}
+			login, _ = encryption.Encrypt(login)
+			password, _ = encryption.Encrypt(password)
+			err = c.repo.SetData(models.LoginPasswordData{
+				Description:  description,
+				Login:        login,
+				Password:     password,
+				LastModified: lastModified,
+			}, c.userID)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}).
+		AddButton("Menu", func() {
+			c.app.SetRoot(c.createSetDataForm(), true)
+		})
 
-		break
-	}
+	form.SetBorder(true).SetTitle("Set LoginPassword data").SetTitleAlign(tview.AlignLeft)
 
-	return nil
-
+	return form
 }
 
-func (c *KeeperClient) setTextData(signal chan os.Signal) error {
+func (c *KeeperClient) createSetTextDataForm() tview.Primitive {
 	var data, description string
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 
-	for {
-		fmt.Println("SetTextData\nEnter data (press ctrl+C to back on previous page):")
+	form := tview.NewForm().
+		AddInputField("Description", "", 0, nil, func(text string) {
+			description = text
+		}).
+		AddInputField("Data", "", 0, nil, func(text string) {
+			data = text
+		}).
+		AddButton("OK", func() {
+			defer c.app.SetRoot(c.createSetDataForm(), true)
+			lastModified := time.Now().Unix()
 
-		select {
-		case <-signal:
-			return ErrBack
-		case data = <-c.rch:
-		}
-
-		fmt.Println("Enter description (press ctrl+C to back on previous page):")
-
-		select {
-		case <-signal:
-			return ErrBack
-		case description = <-c.rch:
-		}
-
-		lastModified := time.Now().Unix()
-
-		reqData := &pb.Value{
-			Kind: &pb.Value_Text{
-				Text: &pb.TextData{
-					Data:         data,
-					Description:  description,
-					LastModified: lastModified,
+			reqData := &pb.Value{
+				Kind: &pb.Value_Text{
+					Text: &pb.TextData{
+						Data:         data,
+						Description:  description,
+						LastModified: lastModified,
+					},
 				},
-			},
-		}
+			}
 
-		resp, err := c.storeClient.SetData(ctx, reqData)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Println(resp.Comment)
+			_, err := c.storeClient.SetData(ctx, reqData)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 
-		data, _ = encryption.Encrypt(data)
+			data, _ = encryption.Encrypt(data)
+			err = c.repo.SetData(models.TextData{
+				Description:  description,
+				Data:         data,
+				LastModified: lastModified,
+			}, c.userID)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}).
+		AddButton("Menu", func() {
+			c.app.SetRoot(c.createSetDataForm(), true)
+		})
 
-		err = c.repo.SetTextData(models.TextData{
-			Description:  description,
-			Data:         data,
-			LastModified: lastModified,
-		}, c.userID)
-		if err != nil {
-			fmt.Println(err)
-		}
-		break
-	}
+	form.SetBorder(true).SetTitle("Set Text data").SetTitleAlign(tview.AlignLeft)
 
-	return nil
+	return form
 }
 
-func (c *KeeperClient) setBinaryData(signal chan os.Signal) error {
+func (c *KeeperClient) createSetBinaryDataForm() tview.Primitive {
 	var description string
 	var data []byte
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 
-	for {
-		fmt.Println("SetBinatyData\nEnter data (press ctrl+C to back on previous page):")
+	form := tview.NewForm().
+		AddInputField("Description", "", 0, nil, func(text string) {
+			description = text
+		}).
+		AddInputField("Data", "", 0, nil, func(text string) {
+			data = []byte(text)
+		}).
+		AddButton("OK", func() {
+			defer c.app.SetRoot(c.createSetDataForm(), true)
+			lastModified := time.Now().Unix()
 
-		select {
-		case <-signal:
-			return ErrBack
-		case strData := <-c.rch:
-			data = []byte(strData)
-		}
-
-		fmt.Println("Enter description (press ctrl+C to back on previous page):")
-
-		select {
-		case <-signal:
-			return ErrBack
-		case description = <-c.rch:
-		}
-
-		lastModified := time.Now().Unix()
-
-		reqData := &pb.Value{
-			Kind: &pb.Value_BinData{
-				BinData: &pb.BinaryData{
-					Data:         data,
-					Description:  description,
-					LastModified: lastModified,
+			reqData := &pb.Value{
+				Kind: &pb.Value_BinData{
+					BinData: &pb.BinaryData{
+						Data:         data,
+						Description:  description,
+						LastModified: lastModified,
+					},
 				},
-			},
-		}
+			}
 
-		resp, err := c.storeClient.SetData(ctx, reqData)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Println(resp.Comment)
+			_, err := c.storeClient.SetData(ctx, reqData)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 
-		data, _ = encryption.EncryptBin(data)
+			data, _ = encryption.EncryptBin(data)
+			err = c.repo.SetData(models.BinaryData{
+				Description:  description,
+				Data:         data,
+				LastModified: lastModified,
+			}, c.userID)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}).
+		AddButton("Menu", func() {
+			c.app.SetRoot(c.createSetDataForm(), true)
+		})
 
-		err = c.repo.SetBinaryData(models.BinaryData{
-			Description:  description,
-			Data:         data,
-			LastModified: lastModified,
-		}, c.userID)
-		if err != nil {
-			fmt.Println(err)
-		}
-		break
-	}
+	form.SetBorder(true).SetTitle("Set Binary data").SetTitleAlign(tview.AlignLeft)
 
-	return nil
+	return form
 }
 
-func (c *KeeperClient) setBankCardData(signal chan os.Signal) error {
+func (c *KeeperClient) createSetBankCardDataForm() tview.Primitive {
 	var number, validThru, cvv, description string
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 
-	for {
-		fmt.Println("SetBinatyData\nEnter card's number (press ctrl+C to back on previous page):")
-		select {
-		case <-signal:
-			return ErrBack
-		case number = <-c.rch:
-		}
+	form := tview.NewForm().
+		AddInputField("Description", "", 0, nil, func(text string) {
+			description = text
+		}).
+		AddInputField("Number", "", 0, nil, func(text string) {
+			number = text
+		}).
+		AddInputField("ValidThru", "", 0, nil, func(text string) {
+			validThru = text
+		}).
+		AddInputField("CVV", "", 0, nil, func(text string) {
+			cvv = text
+		}).
+		AddButton("OK", func() {
+			defer c.app.SetRoot(c.createSetDataForm(), true)
+			lastModified := time.Now().Unix()
 
-		fmt.Println("Enter card's validThru (press ctrl+C to back on previous page):")
-
-		select {
-		case <-signal:
-			return ErrBack
-		case validThru = <-c.rch:
-		}
-
-		fmt.Println("Enter card's cvv (press ctrl+C to back on previous page):")
-
-		select {
-		case <-signal:
-			return ErrBack
-		case cvv = <-c.rch:
-		}
-
-		fmt.Println("Enter description (press ctrl+C to back on previous page):")
-
-		select {
-		case <-signal:
-			return ErrBack
-		case description = <-c.rch:
-		}
-
-		lastModified := time.Now().Unix()
-
-		reqData := &pb.Value{
-			Kind: &pb.Value_CardData{
-				CardData: &pb.BankCardData{
-					Number:       number,
-					ValidThru:    validThru,
-					Cvv:          cvv,
-					Description:  description,
-					LastModified: lastModified,
+			reqData := &pb.Value{
+				Kind: &pb.Value_CardData{
+					CardData: &pb.BankCardData{
+						Number:       number,
+						ValidThru:    validThru,
+						Cvv:          cvv,
+						Description:  description,
+						LastModified: lastModified,
+					},
 				},
-			},
-		}
-
-		resp, err := c.storeClient.SetData(ctx, reqData)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Println(resp.Comment)
-
-		number, _ = encryption.Encrypt(number)
-		validThru, _ = encryption.Encrypt(validThru)
-		cvv, _ = encryption.Encrypt(cvv)
-
-		err = c.repo.SetBankCardData(models.BankCardData{
-			Description:  description,
-			Number:       number,
-			ValidThru:    validThru,
-			CVV:          cvv,
-			LastModified: lastModified,
-		}, c.userID)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		break
-	}
-	return nil
-}
-
-func (c *KeeperClient) getDataArray(signal chan os.Signal) {
-	for {
-		dataArray, err := c.repo.GetDataArray(c.userID)
-
-		fmt.Println("Choice data (press ctrl+C to back on previous page):")
-		store := make(map[string]any)
-		for i := range dataArray {
-			switch tp := dataArray[i].(type) {
-			case models.LoginPasswordData:
-				fmt.Printf("\n%d. Description: %s\n", i+1, tp.Description)
-			case models.TextData:
-				fmt.Printf("\n%d. Description: %s\n", i+1, tp.Description)
-			case models.BinaryData:
-				fmt.Printf("\n%d. Description: %s\n", i+1, tp.Description)
-			case models.BankCardData:
-				fmt.Printf("\n%d. Description: %s\n", i+1, tp.Description)
 			}
-			store[strconv.Itoa(i+1)] = dataArray[i]
-		}
 
-		var number string
-		select {
-		case <-signal:
-			fmt.Println(ErrBack)
-			return
-		case number = <-c.rch:
-		}
-
-		data, ok := store[number]
-		if ok {
-			fmt.Println("1. GetData\n2. UpdateData\n3. DeleteData\n(press ctrl+C to back on previous page)")
-			select {
-			case <-signal:
-				fmt.Println(ErrBack)
+			_, err := c.storeClient.SetData(ctx, reqData)
+			if err != nil {
+				fmt.Println(err)
 				return
-			case number = <-c.rch:
-				if number == "1" {
-					switch v := data.(type) {
-					case models.LoginPasswordData:
-						utils.PrintLoginPasswordData(v)
-					case models.TextData:
-						utils.PrintTextData(v)
-					case models.BinaryData:
-						utils.PrintBinaryData(v)
-					case models.BankCardData:
-						utils.PrintBankCardData(v)
-					}
-				} else if number == "2" {
-					switch v := data.(type) {
-					case models.LoginPasswordData:
-						err = c.updateLoginPasswordData(signal, v)
-					case models.TextData:
-						err = c.updateTextData(signal, v)
-					case models.BinaryData:
-						err = c.updateBinaryData(signal, v)
-					case models.BankCardData:
-						err = c.updateBankCardData(signal, v)
-					}
-				} else if number == "3" {
-					c.deleteData(data)
-				} else {
-					continue
-				}
-				if errors.Is(err, ErrBack) {
-					continue
-				}
 			}
-		}
-	}
+
+			number, _ = encryption.Encrypt(number)
+			validThru, _ = encryption.Encrypt(validThru)
+			cvv, _ = encryption.Encrypt(cvv)
+			err = c.repo.SetData(models.BankCardData{
+				Description:  description,
+				Number:       number,
+				ValidThru:    validThru,
+				CVV:          cvv,
+				LastModified: lastModified,
+			}, c.userID)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}).
+		AddButton("Menu", func() {
+			c.app.SetRoot(c.createSetDataForm(), true)
+		})
+
+	form.SetBorder(true).SetTitle("Set BankCard data").SetTitleAlign(tview.AlignLeft)
+
+	return form
 }
 
-func (c *KeeperClient) updateLoginPasswordData(signal chan os.Signal, data models.LoginPasswordData) error {
+func (c *KeeperClient) createGetDataArrayForm() tview.Primitive {
+	dataArray, _ := c.repo.GetDataArray(c.userID)
+
+	form := tview.NewTable().SetSelectable(true, false)
+
+	store := make(map[int]any)
+	for i := range dataArray {
+		switch tp := dataArray[i].(type) {
+		case models.LoginPasswordData:
+			form.SetCell(i, 0, tview.NewTableCell(tp.Description).SetAlign(1).SetExpansion(1))
+		case models.TextData:
+			form.SetCell(i, 0, tview.NewTableCell(tp.Description).SetAlign(1).SetExpansion(1))
+		case models.BinaryData:
+			form.SetCell(i, 0, tview.NewTableCell(tp.Description).SetAlign(1).SetExpansion(1))
+		case models.BankCardData:
+			form.SetCell(i, 0, tview.NewTableCell(tp.Description).SetAlign(1).SetExpansion(1))
+		}
+		store[i] = dataArray[i]
+	}
+	form.SetCell(len(dataArray), 0, tview.NewTableCell("Menu").SetAlign(1).SetExpansion(1))
+	form.SetSelectedFunc(func(row, column int) {
+		if row == len(dataArray) {
+			c.app.SetRoot(c.createDataMenuForm(), true)
+		} else {
+			switch t := store[row].(type) {
+			case models.LoginPasswordData:
+				c.app.SetRoot(c.createGetLoginPasswordDataFrom(t), true)
+			case models.TextData:
+				c.app.SetRoot(c.createGetTextDataFrom(t), true)
+			case models.BinaryData:
+				c.app.SetRoot(c.createGetBinaryDataFrom(t), true)
+			case models.BankCardData:
+				c.app.SetRoot(c.createGetBankCardDataFrom(t), true)
+			}
+		}
+	})
+
+	form.SetTitle("Data list")
+
+	return form
+}
+
+func (c *KeeperClient) createGetLoginPasswordDataFrom(data models.LoginPasswordData) tview.Primitive {
+	login, _ := encryption.Decode(data.Login)
+	password, _ := encryption.Decode(data.Password)
+
+	form := tview.NewForm().
+		AddTextView("Description", data.Description, 0, 2, false, false).
+		AddTextView("Login", login, 0, 2, false, false).
+		AddTextView("Password", password, 0, 2, false, false).
+		AddButton("Update", func() {
+			c.app.SetRoot(c.createUpdateLoginPasswordDataForm(data), true)
+		}).
+		AddButton("Delete", func() {
+			c.deleteData(data)
+			c.app.SetRoot(c.createGetDataArrayForm(), true)
+		}).
+		AddButton("Back", func() {
+			c.app.SetRoot(c.createGetDataArrayForm(), true)
+		})
+
+	return form
+}
+
+func (c *KeeperClient) createGetTextDataFrom(data models.TextData) tview.Primitive {
+	textData, _ := encryption.Decode(string(data.Data))
+
+	form := tview.NewForm().
+		AddTextView("Description", data.Description, 0, 0, false, false).
+		AddTextView("Data", textData, 0, 0, false, false).
+		AddButton("Update", func() {
+			c.app.SetRoot(c.createUpdateTextDataForm(data), true)
+		}).
+		AddButton("Delete", func() {
+			c.deleteData(data)
+			c.app.SetRoot(c.createGetDataArrayForm(), true)
+		}).
+		AddButton("Back", func() {
+			c.app.SetRoot(c.createGetDataArrayForm(), true)
+		})
+
+	return form
+}
+
+func (c *KeeperClient) createGetBinaryDataFrom(data models.BinaryData) tview.Primitive {
+	binData, _ := encryption.DecodeBin(data.Data)
+
+	form := tview.NewForm().
+		AddTextView("Description", data.Description, 0, 0, false, false).
+		AddTextView("Data", string(binData), 0, 0, false, false).
+		AddButton("Update", func() {
+			c.app.SetRoot(c.createUpdateBinaryDataForm(data), true)
+		}).
+		AddButton("Delete", func() {
+			c.deleteData(data)
+			c.app.SetRoot(c.createGetDataArrayForm(), true)
+		}).
+		AddButton("Back", func() {
+			c.app.SetRoot(c.createGetDataArrayForm(), true)
+		})
+
+	return form
+}
+
+func (c *KeeperClient) createGetBankCardDataFrom(data models.BankCardData) tview.Primitive {
+	number, _ := encryption.Decode(data.Number)
+	validThru, _ := encryption.Decode(data.ValidThru)
+	cvv, _ := encryption.Decode(data.CVV)
+
+	form := tview.NewForm().
+		AddTextView("Description", data.Description, 0, 0, false, false).
+		AddTextView("Number", number, 0, 0, false, false).
+		AddTextView("ValidThru", validThru, 0, 0, false, false).
+		AddTextView("CVV", cvv, 0, 0, false, false).
+		AddButton("Update", func() {
+			c.app.SetRoot(c.createUpdateBankCardDataForm(data), true)
+		}).
+		AddButton("Delete", func() {
+			c.deleteData(data)
+			c.app.SetRoot(c.createGetDataArrayForm(), true)
+		}).
+		AddButton("Back", func() {
+			c.app.SetRoot(c.createGetDataArrayForm(), true)
+		})
+
+	return form
+}
+
+func (c *KeeperClient) createUpdateLoginPasswordDataForm(data models.LoginPasswordData) tview.Primitive {
 	var login, password, encLogin, encPassword string
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 
 	oldLogin, _ := encryption.Decode(data.Login)
 	oldPassword, _ := encryption.Decode(data.Password)
-	for {
 
-		fmt.Printf("UpdateLoginPasswordData (press ctrl+C to back on previous page)\nOld login: %s\nEnter new login: (to skip press enter)\n", oldLogin)
+	form := tview.NewForm().
+		AddTextView("Description", data.Description, 0, 0, false, false).
+		AddInputField("Login", oldLogin, 0, nil, func(text string) {
+			login = text
+			encLogin, _ = encryption.Encrypt(text)
+		}).
+		AddInputField("Password", oldPassword, 20, nil, func(text string) {
+			password = text
+			encPassword, _ = encryption.Encrypt(text)
+		}).
+		AddButton("OK", func() {
+			defer c.app.SetRoot(c.createGetDataArrayForm(), true)
+			lastModified := time.Now().Unix()
 
-		select {
-		case <-signal:
-			return ErrBack
-		case v := <-c.rch:
-			if v == "" {
-				break
-			}
-			login = v
-			encLogin, _ = encryption.Encrypt(v)
-		}
-
-		fmt.Printf("(press ctrl+C to back on previous page)\nOld password: %s\nEnter new password: (to skip press enter)\n", oldPassword)
-
-		select {
-		case <-signal:
-			return ErrBack
-		case v := <-c.rch:
-			if v == "" {
-				break
-			}
-			password = v
-			encPassword, _ = encryption.Encrypt(v)
-		}
-
-		if login == "" && password == "" {
-			fmt.Println("error: login and password are empty")
-			continue
-		}
-
-		lastModified := time.Now().Unix()
-
-		reqData := &pb.Value{
-			Kind: &pb.Value_LoginPassword{
-				LoginPassword: &pb.LoginPasswordData{
-					Login:        login,
-					Password:     password,
-					Description:  data.Description,
-					LastModified: lastModified,
+			reqData := &pb.Value{
+				Kind: &pb.Value_LoginPassword{
+					LoginPassword: &pb.LoginPasswordData{
+						Login:        login,
+						Password:     password,
+						Description:  data.Description,
+						LastModified: lastModified,
+					},
 				},
-			},
-		}
+			}
 
-		resp, err := c.storeClient.UpdateData(ctx, reqData)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Println(resp.Comment)
-		err = c.repo.UpdateLoginPasswordsData(models.LoginPasswordData{
-			Description:  data.Description,
-			Login:        encLogin,
-			Password:     encPassword,
-			LastModified: lastModified,
-		}, c.userID)
-		if err != nil {
-			fmt.Println(err)
-		}
-		break
-	}
+			_, err := c.storeClient.UpdateData(ctx, reqData)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 
-	return nil
+			err = c.repo.UpdateLoginPasswordData(models.LoginPasswordData{
+				Description:  data.Description,
+				Login:        encLogin,
+				Password:     encPassword,
+				LastModified: lastModified,
+			}, c.userID)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}).
+		AddButton("Menu", func() {
+			defer c.app.SetRoot(c.createGetDataArrayForm(), true)
+		})
+
+	form.SetBorder(true).SetTitle("Update LooginPassword data").SetTitleAlign(tview.AlignLeft)
+
+	return form
 }
 
-func (c *KeeperClient) updateTextData(signal chan os.Signal, data models.TextData) error {
+func (c *KeeperClient) createUpdateTextDataForm(data models.TextData) tview.Primitive {
 	var textData, encData string
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 	oldData, _ := encryption.Decode(data.Data)
-	for {
-		fmt.Printf("UpdateTextData (press ctrl+C to back on previous page)\nOld data: %s\nEnter new data:\n", oldData)
+	form := tview.NewForm().
+		AddTextView("Description", data.Description, 0, 0, false, false).
+		AddInputField("Data", oldData, 0, nil, func(text string) {
+			textData = text
+			encData, _ = encryption.Encrypt(text)
+		}).
+		AddButton("OK", func() {
+			defer c.app.SetRoot(c.createGetDataArrayForm(), true)
+			lastModified := time.Now().Unix()
 
-		select {
-		case <-signal:
-			return ErrBack
-		case v := <-c.rch:
-			if v == "" {
-				break
-			}
-			textData = v
-			encData, _ = encryption.Encrypt(v)
-		}
-
-		if textData == "" {
-			fmt.Println("error: data is empty")
-			continue
-		}
-
-		lastModified := time.Now().Unix()
-
-		reqData := &pb.Value{
-			Kind: &pb.Value_Text{
-				Text: &pb.TextData{
-					Data:         textData,
-					Description:  data.Description,
-					LastModified: lastModified,
+			reqData := &pb.Value{
+				Kind: &pb.Value_Text{
+					Text: &pb.TextData{
+						Data:         textData,
+						Description:  data.Description,
+						LastModified: lastModified,
+					},
 				},
-			},
-		}
+			}
 
-		resp, err := c.storeClient.UpdateData(ctx, reqData)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Println(resp.Comment)
-		err = c.repo.UpdateTextData(models.TextData{
-			Description:  data.Description,
-			Data:         encData,
-			LastModified: lastModified,
-		}, c.userID)
-		if err != nil {
-			fmt.Println(err)
-		}
-		break
-	}
-	return nil
+			_, err := c.storeClient.UpdateData(ctx, reqData)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			err = c.repo.UpdateTextData(models.TextData{
+				Description:  data.Description,
+				Data:         encData,
+				LastModified: lastModified,
+			}, c.userID)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}).
+		AddButton("Menu", func() {
+			defer c.app.SetRoot(c.createGetDataArrayForm(), true)
+		})
+
+	form.SetBorder(true).SetTitle("Set Text data").SetTitleAlign(tview.AlignLeft)
+
+	return form
 }
 
-func (c *KeeperClient) updateBinaryData(signal chan os.Signal, data models.BinaryData) error {
+func (c *KeeperClient) createUpdateBinaryDataForm(data models.BinaryData) tview.Primitive {
 	var binData string
 	var encData []byte
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 	oldData, _ := encryption.DecodeBin(data.Data)
-	for {
-		fmt.Printf("UpdateBinaryData (press ctrl+C to back on previous page)\nOld data: %v\nEnter new data:\n", oldData)
+	form := tview.NewForm().
+		AddTextView("Description", data.Description, 0, 0, false, false).
+		AddInputField("Data", string(oldData), 0, nil, func(text string) {
+			binData = text
+			encData, _ = encryption.EncryptBin([]byte(text))
+		}).
+		AddButton("OK", func() {
+			defer c.app.SetRoot(c.createGetDataArrayForm(), true)
+			lastModified := time.Now().Unix()
 
-		select {
-		case <-signal:
-			return ErrBack
-		case v := <-c.rch:
-			if v == "" {
-				break
-			}
-			binData = v
-			encData, _ = encryption.EncryptBin([]byte(v))
-		}
-
-		if binData == "" {
-			fmt.Println("error: data is empty")
-			continue
-		}
-
-		lastModified := time.Now().Unix()
-
-		reqData := &pb.Value{
-			Kind: &pb.Value_BinData{
-				BinData: &pb.BinaryData{
-					Data:         []byte(binData),
-					Description:  data.Description,
-					LastModified: lastModified,
+			reqData := &pb.Value{
+				Kind: &pb.Value_BinData{
+					BinData: &pb.BinaryData{
+						Data:         []byte(binData),
+						Description:  data.Description,
+						LastModified: lastModified,
+					},
 				},
-			},
-		}
+			}
 
-		resp, err := c.storeClient.UpdateData(ctx, reqData)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Println(resp.Comment)
-		err = c.repo.UpdateBinaryData(models.BinaryData{
-			Description:  data.Description,
-			Data:         encData,
-			LastModified: lastModified,
-		}, c.userID)
-		if err != nil {
-			fmt.Println(err)
-		}
-		break
-	}
-	return nil
+			_, err := c.storeClient.UpdateData(ctx, reqData)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			err = c.repo.UpdateBinaryData(models.BinaryData{
+				Description:  data.Description,
+				Data:         encData,
+				LastModified: lastModified,
+			}, c.userID)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}).
+		AddButton("Menu", func() {
+			defer c.app.SetRoot(c.createGetDataArrayForm(), true)
+		})
+
+	form.SetBorder(true).SetTitle("Set Text data").SetTitleAlign(tview.AlignLeft)
+
+	return form
 }
 
-func (c *KeeperClient) updateBankCardData(signal chan os.Signal, data models.BankCardData) error {
+func (c *KeeperClient) createUpdateBankCardDataForm(data models.BankCardData) tview.Primitive {
 	var number, validThru, cvv, encNumber, encValidThru, encCvv string
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 	oldNumber, _ := encryption.Decode(data.Number)
 	oldValidThru, _ := encryption.Decode(data.ValidThru)
 	oldCVV, _ := encryption.Decode(data.CVV)
-	for {
-		fmt.Printf("UpdateBankCardData (press ctrl+C to back on previous page)\nOld number: %s\nEnter new number: (to skip press enter):\n", oldNumber)
 
-		select {
-		case <-signal:
-			return ErrBack
-		case v := <-c.rch:
-			if v == "" {
-				break
-			}
-			number = v
-			encNumber, _ = encryption.Encrypt(v)
-		}
+	form := tview.NewForm().
+		AddTextView("Description", data.Description, 0, 0, false, false).
+		AddInputField("Number", oldNumber, 0, nil, func(text string) {
+			number = text
+			encNumber, _ = encryption.Encrypt(text)
+		}).
+		AddInputField("ValidThru", oldValidThru, 0, nil, func(text string) {
+			validThru = text
+			encValidThru, _ = encryption.Encrypt(text)
+		}).
+		AddInputField("CVV", oldCVV, 0, nil, func(text string) {
+			cvv = text
+			encCvv, _ = encryption.Encrypt(text)
+		}).
+		AddButton("OK", func() {
+			defer c.app.SetRoot(c.createGetDataArrayForm(), true)
+			lastModified := time.Now().Unix()
 
-		fmt.Printf("(press ctrl+C to back on previous page)\nOld validThru: %s\nEnter new validThru: (to skip press enter)\n", oldValidThru)
-
-		select {
-		case <-signal:
-			return ErrBack
-		case v := <-c.rch:
-			if v == "" {
-				break
-			}
-			validThru = v
-			encValidThru, _ = encryption.Encrypt(v)
-
-		}
-
-		fmt.Printf("(press ctrl+C to back on previous page)\nOld cvv: %s\nEnter new cvv: (to skip press enter)\n", oldCVV)
-
-		select {
-		case <-signal:
-			return ErrBack
-		case v := <-c.rch:
-			if v == "" {
-				break
-			}
-			cvv = v
-			encCvv, _ = encryption.Encrypt(v)
-		}
-
-		if number == "" && validThru == "" && cvv == "" {
-			fmt.Println("error: number, validThru and cvv are empty")
-			continue
-		}
-
-		lastModified := time.Now().Unix()
-
-		reqData := &pb.Value{
-			Kind: &pb.Value_CardData{
-				CardData: &pb.BankCardData{
-					Number:       number,
-					ValidThru:    validThru,
-					Cvv:          cvv,
-					Description:  data.Description,
-					LastModified: lastModified,
+			reqData := &pb.Value{
+				Kind: &pb.Value_CardData{
+					CardData: &pb.BankCardData{
+						Number:       number,
+						ValidThru:    validThru,
+						Cvv:          cvv,
+						Description:  data.Description,
+						LastModified: lastModified,
+					},
 				},
-			},
-		}
+			}
 
-		resp, err := c.storeClient.UpdateData(ctx, reqData)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Println(resp.Comment)
-		err = c.repo.UpdateBankCardData(models.BankCardData{
-			Description:  data.Description,
-			Number:       encNumber,
-			ValidThru:    encValidThru,
-			CVV:          encCvv,
-			LastModified: lastModified,
-		}, c.userID)
-		if err != nil {
-			fmt.Println(err)
-		}
-		break
-	}
-	return nil
+			_, err := c.storeClient.UpdateData(ctx, reqData)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			err = c.repo.UpdateBankCardData(models.BankCardData{
+				Description:  data.Description,
+				Number:       encNumber,
+				ValidThru:    encValidThru,
+				CVV:          encCvv,
+				LastModified: lastModified,
+			}, c.userID)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}).
+		AddButton("Menu", func() {
+			defer c.app.SetRoot(c.createGetDataArrayForm(), true)
+		})
+
+	form.SetBorder(true).SetTitle("Update LooginPassword data").SetTitleAlign(tview.AlignLeft)
+
+	return form
 }
 
 func (c *KeeperClient) deleteData(data any) {
@@ -672,11 +653,10 @@ func (c *KeeperClient) deleteData(data any) {
 	}
 
 	reqData := &pb.Key{Key: key}
-	resp, err := c.storeClient.DeleteData(ctx, reqData)
+	_, err := c.storeClient.DeleteData(ctx, reqData)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(resp.Comment)
 	err = deleteFunc(key, c.userID)
 	if err != nil {
 		fmt.Println(err)
@@ -719,7 +699,7 @@ func (c *KeeperClient) sync() {
 		switch t := resp.Values[i].Kind.(type) {
 		case *pb.Value_LoginPassword:
 			if t.LoginPassword.LastModified > lastSync {
-				err = c.repo.SetLoginPasswordsData(models.LoginPasswordData{
+				err = c.repo.SetData(models.LoginPasswordData{
 					Description:  t.LoginPassword.Description,
 					Login:        t.LoginPassword.Login,
 					Password:     t.LoginPassword.Password,
@@ -729,7 +709,7 @@ func (c *KeeperClient) sync() {
 			delete(exsits, t.LoginPassword.Description)
 		case *pb.Value_Text:
 			if t.Text.LastModified > lastSync {
-				err = c.repo.SetTextData(models.TextData{
+				err = c.repo.SetData(models.TextData{
 					Description:  t.Text.Description,
 					Data:         t.Text.Data,
 					LastModified: t.Text.LastModified,
@@ -738,7 +718,7 @@ func (c *KeeperClient) sync() {
 			delete(exsits, t.Text.Description)
 		case *pb.Value_BinData:
 			if t.BinData.LastModified > lastSync {
-				err = c.repo.SetBinaryData(models.BinaryData{
+				err = c.repo.SetData(models.BinaryData{
 					Description:  t.BinData.Description,
 					Data:         t.BinData.Data,
 					LastModified: t.BinData.LastModified,
@@ -747,7 +727,7 @@ func (c *KeeperClient) sync() {
 			delete(exsits, t.BinData.Description)
 		case *pb.Value_CardData:
 			if t.CardData.LastModified > lastSync {
-				err = c.repo.SetBankCardData(models.BankCardData{
+				err = c.repo.SetData(models.BankCardData{
 					Description:  t.CardData.Description,
 					Number:       t.CardData.Number,
 					ValidThru:    t.CardData.ValidThru,
