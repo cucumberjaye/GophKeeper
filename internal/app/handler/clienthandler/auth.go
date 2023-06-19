@@ -37,7 +37,7 @@ func (c *KeeperClient) createRegistrationForm() tview.Primitive {
 		AddInputField("Login", "", 0, nil, func(text string) {
 			login = text
 		}).
-		AddPasswordField("Password", "", 20, '*', func(text string) {
+		AddPasswordField("Password", "", 0, '*', func(text string) {
 			password = text
 		}).
 		AddButton("OK", func() {
