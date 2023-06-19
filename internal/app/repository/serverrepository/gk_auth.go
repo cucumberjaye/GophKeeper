@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
+// AddUser - функция для сохранения нового пользователя в Postgres.
 func (r *KeeperRepository) AddUser(userID, login, password string) error {
 	insertTag, err := r.db.Exec(context.Background(), "INSERT INTO users (user_id, login, password) values($1, $2, $3)", userID, login, password)
 	if err != nil {
@@ -21,6 +22,7 @@ func (r *KeeperRepository) AddUser(userID, login, password string) error {
 	return nil
 }
 
+// CheckUser - функция для получения id пользователя, если он существует в Postgres.
 func (r *KeeperRepository) CheckUser(login, password string) (string, error) {
 	var userID string
 	err := r.db.QueryRow(context.Background(), "SELECT user_id FROM users WHERE login=$1 AND password=$2", login, password).Scan(&userID)

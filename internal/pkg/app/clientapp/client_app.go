@@ -8,10 +8,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// ClientApp - структура для запуска клиента.
 type ClientApp struct {
 	client *clienthandler.KeeperClient
 }
 
+// New - инициализирует структуру ClientApp.
 func New() (*ClientApp, error) {
 	cfg, err := configs.New()
 	if err != nil {
@@ -25,6 +27,7 @@ func New() (*ClientApp, error) {
 	return &ClientApp{client: clinet}, nil
 }
 
+// Run - запускает клиента.
 func (a *ClientApp) Run() error {
 	log.Info().Msg("Client starting...")
 

@@ -16,6 +16,7 @@ const (
 	dbDriver = "pgx"
 )
 
+// New - создает подключение к Postgres и добавляет миграции.
 func New(dbCfg *configs.DBConnConfig) (*pgxpool.Pool, error) {
 	dataBase, err := sql.Open(dbDriver,
 		fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",

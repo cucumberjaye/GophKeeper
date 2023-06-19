@@ -1,7 +1,6 @@
 package clienthandler
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/cucumberjaye/GophKeeper/configs"
@@ -12,10 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var (
-	ErrBack = errors.New("back")
-)
-
+// KeeperClient - содержит поля необходимые для работы клиента.
 type KeeperClient struct {
 	authClient  pb.AuthenticationClient
 	storeClient pb.StorageClient
@@ -28,6 +24,7 @@ type KeeperClient struct {
 	repo ClientRepository
 }
 
+// ClientRepository - интерфейс взаимодействия с базой данных.
 type ClientRepository interface {
 	SetLastSync(userID string) error
 	GetLastSync(userID string) (int64, error)
@@ -38,6 +35,7 @@ type ClientRepository interface {
 	DeleteDataRepository
 }
 
+// UpdateDataRepository - интерфейс описывающий методы обновления данных в базе.
 type UpdateDataRepository interface {
 	UpdateLoginPasswordData(data models.LoginPasswordData, userID string) error
 	UpdateTextData(data models.TextData, userID string) error
@@ -45,6 +43,7 @@ type UpdateDataRepository interface {
 	UpdateBankCardData(data models.BankCardData, userID string) error
 }
 
+// DeleteDataRepository - интерфейс описывающий методы удаления данных из базы.
 type DeleteDataRepository interface {
 	DeleteLoginPasswordData(key string, userID string) error
 	DeleteTextData(key string, userID string) error
@@ -52,6 +51,7 @@ type DeleteDataRepository interface {
 	DeleteBankCardData(key string, userID string) error
 }
 
+// New - создает объект KeeperClient.
 func New(repo ClientRepository) (*KeeperClient, error) {
 	cfg, err := configs.New()
 	if err != nil {
@@ -72,6 +72,7 @@ func New(repo ClientRepository) (*KeeperClient, error) {
 	}, nil
 }
 
+// Run - запускает клиента.
 func (c *KeeperClient) Run() error {
 	c.app = tview.NewApplication()
 

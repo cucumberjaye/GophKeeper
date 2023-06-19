@@ -18,6 +18,7 @@ const (
 	bankCardData      = "cd"
 )
 
+// SetData - функция для сохранения данных в Redis.
 func (r *ClientStorage) SetData(data any, userID string) error {
 	switch tp := data.(type) {
 	case models.LoginPasswordData:
@@ -33,6 +34,7 @@ func (r *ClientStorage) SetData(data any, userID string) error {
 	return errors.New("attempt to set unknown type")
 }
 
+// GetDataArray - функция для получения данных из Redis.
 func (r *ClientStorage) GetDataArray(userID string) ([]any, error) {
 	keys, err := r.rdb.Keys(context.Background(), fmt.Sprintf("*%s", userID)).Result()
 	if err != nil {
@@ -64,6 +66,7 @@ func (r *ClientStorage) GetDataArray(userID string) ([]any, error) {
 	return result, nil
 }
 
+// UpdateLoginPasswordData - функция для изменеия логина и пароля в Redis.
 func (r *ClientStorage) UpdateLoginPasswordData(data models.LoginPasswordData, userID string) error {
 	var old models.LoginPasswordData
 	var err error
@@ -84,14 +87,17 @@ func (r *ClientStorage) UpdateLoginPasswordData(data models.LoginPasswordData, u
 	return r.rdb.HSet(context.Background(), data.Description+":"+userID, &data).Err()
 }
 
+// UpdateTextData - функция для изменеия текстовых данных в Redis.
 func (r *ClientStorage) UpdateTextData(data models.TextData, userID string) error {
 	return r.rdb.HSet(context.Background(), data.Description+":"+userID, &data).Err()
 }
 
+// UpdateBinaryData - функция для изменения бинарных данных в Redis.
 func (r *ClientStorage) UpdateBinaryData(data models.BinaryData, userID string) error {
 	return r.rdb.HSet(context.Background(), data.Description+":"+userID, &data).Err()
 }
 
+// UpdateBankCardData - функция для изменения банковских данных в Redis.
 func (r *ClientStorage) UpdateBankCardData(data models.BankCardData, userID string) error {
 	var old models.BankCardData
 	var err error
@@ -116,30 +122,37 @@ func (r *ClientStorage) UpdateBankCardData(data models.BankCardData, userID stri
 	return r.rdb.HSet(context.Background(), data.Description+":"+userID, &data).Err()
 }
 
+// DeleteLoginPasswordData - функция для удаления данных логина и пароля из Redis.
 func (r *ClientStorage) DeleteLoginPasswordData(key string, userID string) error {
 	return r.rdb.Del(context.Background(), fmt.Sprintf("%s:%s:%s", loginPasswordData, key, userID)).Err()
 }
 
+// DeleteTextData - функция для удаления текстовых данных из Redis.
 func (r *ClientStorage) DeleteTextData(key string, userID string) error {
 	return r.rdb.Del(context.Background(), fmt.Sprintf("%s:%s:%s", textData, key, userID)).Err()
 }
 
+// DeleteBinaryData - функция для удаления бинарных данных из Redis.
 func (r *ClientStorage) DeleteBinaryData(key string, userID string) error {
 	return r.rdb.Del(context.Background(), fmt.Sprintf("%s:%s:%s", binaryData, key, userID)).Err()
 }
 
+// DeleteBankCardData - функция для удаления банковских данных из Redis.
 func (r *ClientStorage) DeleteBankCardData(key string, userID string) error {
 	return r.rdb.Del(context.Background(), fmt.Sprintf("%s:%s:%s", bankCardData, key, userID)).Err()
 }
 
+// SetLastSync - функция для сохраниения последней синхронизации с сервером.
 func (r *ClientStorage) SetLastSync(userID string) error {
 	return r.rdb.Set(context.Background(), lastModifiedKey+userID, time.Now().Unix(), 0).Err()
 }
 
+// GetLastSync - функция для получения последней синхронизации с сервером.
 func (r *ClientStorage) GetLastSync(userID string) (int64, error) {
 	return r.rdb.Get(context.Background(), lastModifiedKey+userID).Int64()
 }
 
+// GetAllUserKeys - функция для получения всех клучей от данных из Redis.
 func (r *ClientStorage) GetAllUserKeys(userID string) (map[string]func(string, string) error, error) {
 	keys, err := r.rdb.Keys(context.Background(), fmt.Sprintf("*%s", userID)).Result()
 	if err != nil {

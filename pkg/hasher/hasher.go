@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// HasherSha256 - хеширует данные data.
 func HasherSha256(data string) string {
 	h := sha256.New()
 	h.Write([]byte(data))

@@ -4,16 +4,19 @@ import (
 	"github.com/cucumberjaye/GophKeeper/internal/app/models"
 )
 
+// KeeperService - интерфейс для взаимодействия с логическим слоем.
 type KeeperService interface {
 	AuthService
 	StoreService
 }
 
+// AuthService - интерефейс для взаимодействия с логическими методами аутентификации.
 type AuthService interface {
 	AddUser(login, password string) error
 	CreateToken(login, password string) (string, error)
 }
 
+// StoreService - интерефейс для взаимодействия с логическими методами храниения и изменения данных.
 type StoreService interface {
 	SetLoginPasswordData(userID string, data models.LoginPasswordData) error
 	SetTextData(userID string, data models.TextData) error

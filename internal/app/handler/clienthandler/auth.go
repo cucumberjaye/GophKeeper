@@ -8,6 +8,7 @@ import (
 	"github.com/rivo/tview"
 )
 
+// createMenuForm - создает входное меню в регистрацией п аутентификацией.
 func (c *KeeperClient) createMenuForm() tview.Primitive {
 	mainForm := tview.NewTable().SetSelectable(true, false).
 		SetCell(0, 0, tview.NewTableCell("Registaration").SetAlign(1).SetExpansion(1)).
@@ -28,6 +29,7 @@ func (c *KeeperClient) createMenuForm() tview.Primitive {
 	return mainForm
 }
 
+// createRegistrationForm - создает форму для регистрации.
 func (c *KeeperClient) createRegistrationForm() tview.Primitive {
 	var login, password string
 
@@ -59,6 +61,7 @@ func (c *KeeperClient) createRegistrationForm() tview.Primitive {
 	return form
 }
 
+// createAuthenticationForm - создает форму для аутентификации
 func (c *KeeperClient) createAuthenticationForm() tview.Primitive {
 	var login, password string
 

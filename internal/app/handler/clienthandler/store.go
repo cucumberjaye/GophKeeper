@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// createDataMenuForm - создает меню управления данными.
 func (c *KeeperClient) createDataMenuForm() tview.Primitive {
 	form := tview.NewTable().SetSelectable(true, false).
 		SetCell(0, 0, tview.NewTableCell("Set data").SetAlign(1).SetExpansion(1)).
@@ -33,6 +34,7 @@ func (c *KeeperClient) createDataMenuForm() tview.Primitive {
 	return form
 }
 
+// createSetDataForm - создает меню выбора типа данных для добавления.
 func (c *KeeperClient) createSetDataForm() tview.Primitive {
 	form := tview.NewTable().SetSelectable(true, false).
 		SetCell(0, 0, tview.NewTableCell("Login password data").SetAlign(1).SetExpansion(1)).
@@ -59,6 +61,7 @@ func (c *KeeperClient) createSetDataForm() tview.Primitive {
 	return form
 }
 
+// createSetLoginPasswordDataForm - создает форму для добавления логина и пароля.
 func (c *KeeperClient) createSetLoginPasswordDataForm() tview.Primitive {
 	var login, password, description string
 
@@ -116,6 +119,7 @@ func (c *KeeperClient) createSetLoginPasswordDataForm() tview.Primitive {
 	return form
 }
 
+// createSetTextDataForm - создает форму для добавления текстовой информации.
 func (c *KeeperClient) createSetTextDataForm() tview.Primitive {
 	var data, description string
 
@@ -167,6 +171,7 @@ func (c *KeeperClient) createSetTextDataForm() tview.Primitive {
 	return form
 }
 
+// createSetBinaryDataForm - создает форму для добавления бинарных данных.
 func (c *KeeperClient) createSetBinaryDataForm() tview.Primitive {
 	var description string
 	var data []byte
@@ -219,6 +224,7 @@ func (c *KeeperClient) createSetBinaryDataForm() tview.Primitive {
 	return form
 }
 
+// createSetBankCardDataForm - создает форму для добавления банковских реквизитов.
 func (c *KeeperClient) createSetBankCardDataForm() tview.Primitive {
 	var number, validThru, cvv, description string
 
@@ -282,6 +288,7 @@ func (c *KeeperClient) createSetBankCardDataForm() tview.Primitive {
 	return form
 }
 
+// createGetDataArrayForm - создает форму для получения данных клиента.
 func (c *KeeperClient) createGetDataArrayForm() tview.Primitive {
 	dataArray, _ := c.repo.GetDataArray(c.userID)
 
@@ -324,6 +331,7 @@ func (c *KeeperClient) createGetDataArrayForm() tview.Primitive {
 	return form
 }
 
+// createGetLoginPasswordDataFrom - создает форму для получения логина и пароля.
 func (c *KeeperClient) createGetLoginPasswordDataFrom(data models.LoginPasswordData) tview.Primitive {
 	login, _ := encryption.Decode(data.Login)
 	password, _ := encryption.Decode(data.Password)
@@ -346,6 +354,7 @@ func (c *KeeperClient) createGetLoginPasswordDataFrom(data models.LoginPasswordD
 	return form
 }
 
+// createGetTextDataFrom - создает форму для получения текстовых данных.
 func (c *KeeperClient) createGetTextDataFrom(data models.TextData) tview.Primitive {
 	textData, _ := encryption.Decode(string(data.Data))
 
@@ -366,6 +375,7 @@ func (c *KeeperClient) createGetTextDataFrom(data models.TextData) tview.Primiti
 	return form
 }
 
+// createGetBinaryDataFrom - создает форму для получения бинарных данных.
 func (c *KeeperClient) createGetBinaryDataFrom(data models.BinaryData) tview.Primitive {
 	binData, _ := encryption.DecodeBin(data.Data)
 
@@ -386,6 +396,7 @@ func (c *KeeperClient) createGetBinaryDataFrom(data models.BinaryData) tview.Pri
 	return form
 }
 
+// createGetBankCardDataFrom - создает форму для получения банковских данных.
 func (c *KeeperClient) createGetBankCardDataFrom(data models.BankCardData) tview.Primitive {
 	number, _ := encryption.Decode(data.Number)
 	validThru, _ := encryption.Decode(data.ValidThru)
@@ -410,6 +421,7 @@ func (c *KeeperClient) createGetBankCardDataFrom(data models.BankCardData) tview
 	return form
 }
 
+// createUpdateLoginPasswordDataForm - создает форму для изменеия данных логина или пароля.
 func (c *KeeperClient) createUpdateLoginPasswordDataForm(data models.LoginPasswordData) tview.Primitive {
 	var login, password, encLogin, encPassword string
 
@@ -468,6 +480,7 @@ func (c *KeeperClient) createUpdateLoginPasswordDataForm(data models.LoginPasswo
 	return form
 }
 
+// createUpdateTextDataForm - создает форму для изменения текстовых данных.
 func (c *KeeperClient) createUpdateTextDataForm(data models.TextData) tview.Primitive {
 	var textData, encData string
 
@@ -517,6 +530,7 @@ func (c *KeeperClient) createUpdateTextDataForm(data models.TextData) tview.Prim
 	return form
 }
 
+// createUpdateBinaryDataForm - создает форму для изменения бинарных данных.
 func (c *KeeperClient) createUpdateBinaryDataForm(data models.BinaryData) tview.Primitive {
 	var binData string
 	var encData []byte
@@ -567,6 +581,7 @@ func (c *KeeperClient) createUpdateBinaryDataForm(data models.BinaryData) tview.
 	return form
 }
 
+// createUpdateBankCardDataForm - создает форму для изменения банковских данных.
 func (c *KeeperClient) createUpdateBankCardDataForm(data models.BankCardData) tview.Primitive {
 	var number, validThru, cvv, encNumber, encValidThru, encCvv string
 
@@ -631,6 +646,7 @@ func (c *KeeperClient) createUpdateBankCardDataForm(data models.BankCardData) tv
 	return form
 }
 
+// deleteData - удаляет данные из базы по ключу.
 func (c *KeeperClient) deleteData(data any) {
 	var deleteFunc func(key, userID string) error
 	var key string
@@ -663,6 +679,7 @@ func (c *KeeperClient) deleteData(data any) {
 	}
 }
 
+// syncer - раз в 5 минут синхронизирует данные с сервером.
 func (c *KeeperClient) syncer() {
 	c.sync()
 	ticker := time.NewTicker(5 * time.Minute)
@@ -673,6 +690,7 @@ func (c *KeeperClient) syncer() {
 	}
 }
 
+// sync - синхронизирует данные с сервером.
 func (c *KeeperClient) sync() {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authentication", c.authToken)
 

@@ -7,6 +7,7 @@ import (
 	"github.com/cucumberjaye/GophKeeper/pkg/encryption"
 )
 
+// SetLoginPasswordData - шифрует данные и передает в репозиторий.
 func (s *KeeperService) SetLoginPasswordData(userID string, data models.LoginPasswordData) error {
 	var err error
 
@@ -23,6 +24,7 @@ func (s *KeeperService) SetLoginPasswordData(userID string, data models.LoginPas
 	return s.repository.SetLoginPasswordData(userID, data)
 }
 
+// SetTextData - шифрует данные и передает в репозиторий.
 func (s *KeeperService) SetTextData(userID string, data models.TextData) error {
 	var err error
 
@@ -34,6 +36,7 @@ func (s *KeeperService) SetTextData(userID string, data models.TextData) error {
 	return s.repository.SetTextData(userID, data)
 }
 
+// SetBinaryData - шифрует данные и передает в репозиторий.
 func (s *KeeperService) SetBinaryData(userID string, data models.BinaryData) error {
 	var err error
 
@@ -45,6 +48,7 @@ func (s *KeeperService) SetBinaryData(userID string, data models.BinaryData) err
 	return s.repository.SetBinaryData(userID, data)
 }
 
+// SetBankCardData - шифрует данные и передает в репозиторий.
 func (s *KeeperService) SetBankCardData(userID string, data models.BankCardData) error {
 	var err error
 	data.Number, err = encryption.Encrypt(data.Number)
@@ -73,6 +77,7 @@ func (s *KeeperService) DeleteData(key, userID string) error {
 	return s.repository.DeleteData(key, userID)
 }
 
+// UpdateLoginPasswordData - шифрует обновленные данные и передает в репозиторий.
 func (s *KeeperService) UpdateLoginPasswordData(userID string, data models.LoginPasswordData) error {
 	var err error
 	if data.Login != "" {
@@ -91,6 +96,7 @@ func (s *KeeperService) UpdateLoginPasswordData(userID string, data models.Login
 	return s.repository.UpdateLoginPasswordData(userID, data)
 }
 
+// UpdateTextData - шифрует обновленные данные и передает в репозиторий.
 func (s *KeeperService) UpdateTextData(userID string, data models.TextData) error {
 	var err error
 	if data.Data != "" {
@@ -102,6 +108,7 @@ func (s *KeeperService) UpdateTextData(userID string, data models.TextData) erro
 	return s.repository.UpdateTextData(userID, data)
 }
 
+// UpdateBinaryData - шифрует обновленные данные и передает в репозиторий.
 func (s *KeeperService) UpdateBinaryData(userID string, data models.BinaryData) error {
 	var err error
 	if len(data.Data) > 0 {
@@ -113,6 +120,7 @@ func (s *KeeperService) UpdateBinaryData(userID string, data models.BinaryData) 
 	return s.repository.UpdateBinaryData(userID, data)
 }
 
+// UpdateBankCardData - шифрует обновленные данные и передает в репозиторий.
 func (s *KeeperService) UpdateBankCardData(userID string, data models.BankCardData) error {
 	var err error
 	if data.Number != "" {

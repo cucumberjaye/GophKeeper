@@ -16,6 +16,7 @@ func randBytes(n int) ([]byte, error) {
 	return b, nil
 }
 
+// Encrypt - шифрует данные data и возвращает строку hex.
 func Encrypt(data string) (string, error) {
 	key, err := randBytes(16)
 	if err != nil {
@@ -38,6 +39,7 @@ func Encrypt(data string) (string, error) {
 	return hex.EncodeToString(enc), nil
 }
 
+// EncryptBin - шифрует данные data и возвращает []byte.
 func EncryptBin(data []byte) ([]byte, error) {
 	key, err := randBytes(16)
 	if err != nil {
@@ -60,6 +62,7 @@ func EncryptBin(data []byte) ([]byte, error) {
 	return enc, nil
 }
 
+// Decode - расшифровывает данные encData из строки hex.
 func Decode(encData string) (string, error) {
 	data, err := hex.DecodeString(encData)
 	if err != nil {
@@ -86,6 +89,7 @@ func Decode(encData string) (string, error) {
 	return string(dec), nil
 }
 
+// // DecodeBin - расшифровывает данные encData из []byte.
 func DecodeBin(data []byte) ([]byte, error) {
 	key := data[:16]
 

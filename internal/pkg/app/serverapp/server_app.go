@@ -16,10 +16,12 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+// App - структура для запуска сервера.
 type App struct {
 	gs *grpc.Server
 }
 
+// New - инициализирует структуру App.
 func New() (*App, error) {
 	cfg, err := configs.New()
 	if err != nil {
@@ -47,6 +49,7 @@ func New() (*App, error) {
 	return &App{gs: gs}, nil
 }
 
+// Run - запускает сервер.
 func (a *App) Run() error {
 	fmt.Println("server starting...")
 

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// AuthenticationGRPC - перехватчик, проверяющий jwt-токен.
 func AuthenticationGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	notAuth := []string{
 		"/pb.Authentication/Registration",

@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config - хранит все переменные конфигурации.
 type Config struct {
 	ServerAddr string
 
@@ -14,6 +15,7 @@ type Config struct {
 	RedisConfig  *RedisConfig
 }
 
+// DBConnConfig - хранит переменные конфигурации для PostgreSQL.
 type DBConnConfig struct {
 	User         string
 	Password     string
@@ -23,12 +25,14 @@ type DBConnConfig struct {
 	PoolMaxConns string
 }
 
+// RedisConfig - хранит переменные конфигурации для Redis.
 type RedisConfig struct {
 	Host     string
 	Port     string
 	Password string
 }
 
+// New - загружает переменные окружения из dev.env в процесс и считывает переменные окружения в структуру Config.
 func New() (*Config, error) {
 	if err := godotenv.Load("dev.env"); err != nil {
 		return nil, fmt.Errorf("load env file failed with error: %w", err)
@@ -52,6 +56,7 @@ func New() (*Config, error) {
 	}, nil
 }
 
+// getEnvIfExists - считывает переменную окружения по key, если такой нет, возвращает значение по умолчанию.
 func getEnvIfExists(key string, defaultVal string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value

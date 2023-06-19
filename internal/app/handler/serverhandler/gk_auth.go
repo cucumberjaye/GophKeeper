@@ -9,12 +9,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// AuthServer - струтура для использования grpc хендлеров.
 type AuthServer struct {
 	pb.UnimplementedAuthenticationServer
 
-	Service KeeperService
+	Service KeeperService // Service - содержит методы слоя с логикой.
 }
 
+// Registration - grpc метод для регистрации.
 func (s *AuthServer) Registration(ctx context.Context, in *pb.RegistrationRequest) (*pb.ResponseStatus, error) {
 	err := validator.New().Struct(&models.LoginPasswordValidate{
 		Login:    in.Login,
@@ -32,6 +34,7 @@ func (s *AuthServer) Registration(ctx context.Context, in *pb.RegistrationReques
 	return &pb.ResponseStatus{Status: pb.ResponseStatus_OK}, nil
 }
 
+// Authentication - grpc метод для аутентификации.
 func (s *AuthServer) Authentication(ctx context.Context, in *pb.AuthenticationRequest) (*pb.AuthToken, error) {
 	token, err := s.Service.CreateToken(in.Login, in.Password)
 	if err != nil {

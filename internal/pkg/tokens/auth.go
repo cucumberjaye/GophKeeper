@@ -16,6 +16,7 @@ type authClaims struct {
 	UserID string `json:"userID"`
 }
 
+// CreateToken - создает jwt-токен с вшитым userID.
 func CreateToken(userID string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &authClaims{
 		&jwt.StandardClaims{
@@ -27,6 +28,7 @@ func CreateToken(userID string) (string, error) {
 	return token.SignedString([]byte(signKey))
 }
 
+// ParseToken - парсит токен и возвращает userID.
 func ParseToken(tokenString string) (string, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &authClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

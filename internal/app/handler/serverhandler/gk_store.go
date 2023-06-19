@@ -12,12 +12,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// StorageServer - струтура для использования grpc хендлеров.
 type StorageServer struct {
 	pb.UnimplementedStorageServer
 
 	Service KeeperService
 }
 
+// SetData - grpc метод для сохранения данных на сервере.
 func (s *StorageServer) SetData(ctx context.Context, in *pb.Value) (*pb.ResponseStatus, error) {
 	var userID string
 	if md, ok := metadata.FromOutgoingContext(ctx); ok {
@@ -78,6 +80,7 @@ func (s *StorageServer) SetData(ctx context.Context, in *pb.Value) (*pb.Response
 	}, nil
 }
 
+// Sync - grpc метод для получения всех данных пользователя.
 func (s *StorageServer) Sync(ctx context.Context, in *pb.Empty) (*pb.DataArray, error) {
 	var userID string
 	if md, ok := metadata.FromOutgoingContext(ctx); ok {
@@ -150,6 +153,7 @@ func (s *StorageServer) Sync(ctx context.Context, in *pb.Empty) (*pb.DataArray, 
 	return &pb.DataArray{Values: result}, nil
 }
 
+// UpdateData - grpc метод для изменеия данных на сервере.
 func (s *StorageServer) UpdateData(ctx context.Context, in *pb.Value) (*pb.ResponseStatus, error) {
 	var userID string
 	if md, ok := metadata.FromOutgoingContext(ctx); ok {
@@ -210,6 +214,7 @@ func (s *StorageServer) UpdateData(ctx context.Context, in *pb.Value) (*pb.Respo
 	}, nil
 }
 
+// DeleteData - grpc метод для удаления данных с сервера.
 func (s *StorageServer) DeleteData(ctx context.Context, in *pb.Key) (*pb.ResponseStatus, error) {
 	var userID string
 	if md, ok := metadata.FromOutgoingContext(ctx); ok {

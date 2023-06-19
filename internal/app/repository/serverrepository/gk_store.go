@@ -9,6 +9,7 @@ import (
 	"github.com/cucumberjaye/GophKeeper/internal/app/models"
 )
 
+// SetLoginPasswordData - функция для сохранения данных логина и пароля в Postgres.
 func (r *KeeperRepository) SetLoginPasswordData(userID string, data models.LoginPasswordData) error {
 	tx, err := r.db.Begin(context.Background())
 	if err != nil {
@@ -36,6 +37,7 @@ func (r *KeeperRepository) SetLoginPasswordData(userID string, data models.Login
 	return nil
 }
 
+// SetTextDat - функция для сохранения текстовых данных в Postgres.
 func (r *KeeperRepository) SetTextData(userID string, data models.TextData) error {
 	tx, err := r.db.Begin(context.Background())
 	if err != nil {
@@ -63,6 +65,7 @@ func (r *KeeperRepository) SetTextData(userID string, data models.TextData) erro
 	return nil
 }
 
+// SetBinaryData - функция для сохранения бинарных данных в Postgres.
 func (r *KeeperRepository) SetBinaryData(userID string, data models.BinaryData) error {
 	tx, err := r.db.Begin(context.Background())
 	if err != nil {
@@ -90,6 +93,7 @@ func (r *KeeperRepository) SetBinaryData(userID string, data models.BinaryData) 
 	return nil
 }
 
+// SetBankCardData - функция для сохранения банковских данных в Postgres.
 func (r *KeeperRepository) SetBankCardData(userID string, data models.BankCardData) error {
 	tx, err := r.db.Begin(context.Background())
 	if err != nil {
@@ -117,6 +121,7 @@ func (r *KeeperRepository) SetBankCardData(userID string, data models.BankCardDa
 	return nil
 }
 
+// Sync - функция для получения всех данных пользователя из Postgres.
 func (r *KeeperRepository) Sync(userID string) ([]any, error) {
 	var result []any = []any{}
 
@@ -183,6 +188,7 @@ func (r *KeeperRepository) Sync(userID string) ([]any, error) {
 	return result, nil
 }
 
+// DeleteData - функция для удаления данных из Postgres по ключу.
 func (r *KeeperRepository) DeleteData(key, userID string) error {
 	_, err := r.db.Exec(context.Background(), "DELETE FROM users_descriptions WHERE user_id=$1 and description=$2", userID, key)
 	if err != nil {
@@ -192,6 +198,7 @@ func (r *KeeperRepository) DeleteData(key, userID string) error {
 	return nil
 }
 
+// UpdateLoginPasswordData - функция для изменеия данных логина и пароля в Postgres.
 func (r *KeeperRepository) UpdateLoginPasswordData(userID string, data models.LoginPasswordData) error {
 	set := []string{}
 	values := []any{}
@@ -229,6 +236,7 @@ func (r *KeeperRepository) UpdateLoginPasswordData(userID string, data models.Lo
 	return nil
 }
 
+// UpdateTextData - функция для изменения текстовых данных в Postgres.
 func (r *KeeperRepository) UpdateTextData(userID string, data models.TextData) error {
 	set := []string{}
 	values := []any{}
@@ -260,6 +268,7 @@ func (r *KeeperRepository) UpdateTextData(userID string, data models.TextData) e
 	return nil
 }
 
+// UpdateBinaryData - функция для изменения бинарных данных в Postgres.
 func (r *KeeperRepository) UpdateBinaryData(userID string, data models.BinaryData) error {
 	set := []string{}
 	values := []any{}
@@ -291,6 +300,7 @@ func (r *KeeperRepository) UpdateBinaryData(userID string, data models.BinaryDat
 	return nil
 }
 
+// UpdateBankCardData - функция для изменения банковских данных в Postgres.
 func (r *KeeperRepository) UpdateBankCardData(userID string, data models.BankCardData) error {
 	set := []string{}
 	values := []any{}
